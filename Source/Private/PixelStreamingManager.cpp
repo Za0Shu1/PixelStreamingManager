@@ -7,7 +7,6 @@
 
 #include "Framework/Application/SlateApplication.h"
 #include "StandaloneRenderer.h"
-#include "Engine/Public/Slate/SlateGameResources.h"
 #include "Widgets/DeclarativeSyntaxSupport.h"
 #include "Widgets/SWindow.h"
 #include "Widgets/Images/SImage.h"
