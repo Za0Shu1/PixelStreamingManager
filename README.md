@@ -1,2 +1,2 @@
-# slate_psManager_ue5
+# PixelStreamingManager
 This is a standlone program based on unreal engine slate framework.It is used for manage pixel streaming connections.
