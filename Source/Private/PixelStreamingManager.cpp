@@ -20,10 +20,9 @@ int WINAPI WinMain(_In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance,
 	GEngineLoop.PreInit(GetCommandLineW());
 
 	FSlateApplication::InitializeAsStandaloneApplication(GetStandardStandaloneRenderer());
-	const FSlateBrush* icon = FCoreStyle::Get().GetBrush(TEXT("TrashCan"));
+	const FSlateBrush* icon = FCoreStyle::Get().GetBrush(TEXT("Border"));
 
-	//@todo how to get a slate brush from resources file
-	//FSlateApplication::Get().SetAppIcon();
+	//@todo how to get a slate brush from resources file and change applicate icon
 	
 	// 建立窗口
 	TSharedPtr<SWindow> MainWindow = SNew(SWindow).ClientSize(FVector2D(1280, 720))

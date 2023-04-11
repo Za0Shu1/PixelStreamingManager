@@ -9,4 +9,4 @@ xcopy /y/i/s/e ..\..\..\Content\Internationalization\English\icudt64l %PROJECT_N
 xcopy /y/i/s/e ..\..\..\Content\Slate %PROJECT_NAME%\Engine\Content\Slate
 xcopy /y/i/s/e ..\..\..\Shaders\StandaloneRenderer %PROJECT_NAME%\Engine\Shaders\StandaloneRenderer
 xcopy /y/i/s/e Resources\icon %PROJECT_NAME%\Engine\Content\Slate\Icons
-echo "Engine\Binaries\Win64\%PROJECT_NAME%.exe">%PROJECT_NAME%\%PROJECT_NAME%.bat
+echo start /b cmd /c Engine\Binaries\Win64\%PROJECT_NAME%.exe -log >%PROJECT_NAME%\%PROJECT_NAME%.bat
