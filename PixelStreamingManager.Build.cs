@@ -16,6 +16,7 @@ public class PixelStreamingManager : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 		   new string[]
 		   {
+				"CoreUObject",
 				"Slate",
 				"SlateCore",
 				"StandaloneRenderer"

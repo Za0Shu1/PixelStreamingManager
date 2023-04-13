@@ -1,4 +1,4 @@
-﻿#include "../Public/CommonStyle.h"
+﻿#include "CommonStyle.h"
 
 #include "Styling/SlateStyle.h"
 #include "Styling/SlateStyleRegistry.h"
@@ -31,7 +31,7 @@ TSharedRef<FSlateStyleSet> FPSManagerStyle::Create()
 	TSharedRef<FSlateStyleSet> Style = MakeShareable(new FSlateStyleSet("PSManagerStyle"));
 
 	Style->SetContentRoot(FPaths::EngineContentDir() / TEXT("Slate"));
-	Style->Set("CustomAppIcon",new FSlateImageBrush(FPaths::EngineContentDir() / TEXT("Slate") / TEXT("Icons/Icon48.png"),FVector2d(40,40)));
-	Style->Set("AppIcon",new FSlateImageBrush(FPaths::EngineContentDir() / TEXT("Slate") / TEXT("Icons/DefaultAppIcon.png"),FVector2d(20,20)));
+	Style->Set("CustomAppIcon",new FSlateImageBrush(FPaths::EngineContentDir() / TEXT("Slate") / TEXT("Icons/Icon64.png"),FVector2d(64,64)));
+	Style->Set("Background",new FSlateImageBrush(FPaths::EngineContentDir() / TEXT("Slate") / TEXT("Custom/background.png"),FVector2d(2560,1440)));
 	return Style;
 }
