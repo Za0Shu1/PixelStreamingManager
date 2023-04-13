@@ -1,0 +1,115 @@
+﻿Log file open, 04/12/23 15:49:44
+LogWindows: Failed to load 'aqProf.dll' (GetLastError=126)
+LogWindows: File 'aqProf.dll' does not exist
+LogProfilingDebugging: Loading WinPixEventRuntime.dll for PIX profiling (from ../../../Engine/Binaries/ThirdParty/Windows/WinPixEventRuntime/x64).
+LogWindows: Failed to load '../../../Engine/Binaries/ThirdParty/Windows/WinPixEventRuntime/x64/WinPixEventRuntime.dll' (GetLastError=126)
+LogWindows: File '../../../Engine/Binaries/ThirdParty/Windows/WinPixEventRuntime/x64/WinPixEventRuntime.dll' does not exist
+LogProfilingDebugging: Error: Failed to get WinPixEventRuntime.dll handle: 系统找不到指定的路径。 (3)
+LogWindows: Failed to load 'VtuneApi.dll' (GetLastError=126)
+LogWindows: File 'VtuneApi.dll' does not exist
+LogWindows: Failed to load 'VtuneApi32e.dll' (GetLastError=126)
+LogWindows: File 'VtuneApi32e.dll' does not exist
+LogICUInternationalization: ICU TimeZone Detection - Raw Offset: +8:00, Platform Override: ''
+LogInit: Session CrashGUID >====================================================
+         Session CrashGUID >   UECC-Windows-9FD778CE4119B30D100D4E95DCF3ADD0
+         Session CrashGUID >====================================================
+LogWindows: Failed to load '../../../Engine/Binaries/ThirdParty/DbgHelp/dbghelp.dll' (GetLastError=126)
+LogWindows: File '../../../Engine/Binaries/ThirdParty/DbgHelp/dbghelp.dll' does not exist
+LogInit: Build: ++UE5+Release-5.1-CL-0
+LogInit: Engine Version: 5.1.1-0+++UE5+Release-5.1
+LogInit: Compatible Engine Version: 5.1.0-0+++UE5+Release-5.1
+LogInit: Net CL: 0
+LogInit: OS: Windows 11 (22H2) [10.0.22623.730] (), CPU: 12th Gen Intel(R) Core(TM) i7-12700K, GPU: NVIDIA GeForce RTX 3080
+LogInit: Compiled (64-bit): Apr 11 2023 14:36:46
+LogInit: Compiled with Visual C++: 19.34.31937.00
+LogInit: Build Configuration: Development
+LogInit: Branch Name: ++UE5+Release-5.1
+LogInit: Command Line: Engine\Binaries\Win64\PixelStreamingManager.exe  -log 
+LogInit: Base Directory: D:/Epic Games/UnrealEngine/SourceCode/UE_5.1.1/UnrealEngine/Engine/Source/Programs/PixelStreamingManager/PixelStreamingManager/Engine/Binaries/Win64/
+LogInit: Allocator: Mimalloc
+LogInit: Installed Engine Build: 0
+LogDevObjectVersion: Number of dev versions registered: 35
+LogDevObjectVersion:   Dev-Blueprints (B0D832E4-1F89-4F0D-ACCF-7EB736FD4AA2): 10
+LogDevObjectVersion:   Dev-Build (E1C64328-A22C-4D53-A36C-8E866417BD8C): 0
+LogDevObjectVersion:   Dev-Core (375EC13C-06E4-48FB-B500-84F0262A717E): 4
+LogDevObjectVersion:   Dev-Editor (E4B068ED-F494-42E9-A231-DA0B2E46BB41): 40
+LogDevObjectVersion:   Dev-Framework (CFFC743F-43B0-4480-9391-14DF171D2073): 37
+LogDevObjectVersion:   Dev-Mobile (B02B49B5-BB20-44E9-A304-32B752E40360): 3
+LogDevObjectVersion:   Dev-Networking (A4E4105C-59A1-49B5-A7C5-40C4547EDFEE): 0
+LogDevObjectVersion:   Dev-Online (39C831C9-5AE6-47DC-9A44-9C173E1C8E7C): 0
+LogDevObjectVersion:   Dev-Physics (78F01B33-EBEA-4F98-B9B4-84EACCB95AA2): 20
+LogDevObjectVersion:   Dev-Platform (6631380F-2D4D-43E0-8009-CF276956A95A): 0
+LogDevObjectVersion:   Dev-Rendering (12F88B9F-8875-4AFC-A67C-D90C383ABD29): 45
+LogDevObjectVersion:   Dev-Sequencer (7B5AE74C-D270-4C10-A958-57980B212A5A): 13
+LogDevObjectVersion:   Dev-VR (D7296918-1DD6-4BDD-9DE2-64A83CC13884): 3
+LogDevObjectVersion:   Dev-LoadTimes (C2A15278-BFE7-4AFE-6C17-90FF531DF755): 1
+LogDevObjectVersion:   Private-Geometry (6EACA3D4-40EC-4CC1-B786-8BED09428FC5): 3
+LogDevObjectVersion:   Dev-AnimPhys (29E575DD-E0A3-4627-9D10-D276232CDCEA): 17
+LogDevObjectVersion:   Dev-Anim (AF43A65D-7FD3-4947-9873-3E8ED9C1BB05): 15
+LogDevObjectVersion:   Dev-ReflectionCapture (6B266CEC-1EC7-4B8F-A30B-E4D90942FC07): 1
+LogDevObjectVersion:   Dev-Automation (0DF73D61-A23F-47EA-B727-89E90C41499A): 1
+LogDevObjectVersion:   FortniteMain (601D1886-AC64-4F84-AA16-D3DE0DEAC7D6): 80
+LogDevObjectVersion:   FortniteNC (5B4C06B7-2463-4AF8-805B-BF70CDF5D0DD): 10
+LogDevObjectVersion:   FortniteRelease (E7086368-6B23-4C58-8439-1B7016265E91): 4
+LogDevObjectVersion:   Dev-Enterprise (9DFFBCD6-494F-0158-E221-12823C92A888): 10
+LogDevObjectVersion:   Dev-Niagara (F2AED0AC-9AFE-416F-8664-AA7FFA26D6FC): 1
+LogDevObjectVersion:   Dev-Destruction (174F1F0B-B4C6-45A5-B13F-2EE8D0FB917D): 10
+LogDevObjectVersion:   Dev-Physics-Ext (35F94A83-E258-406C-A318-09F59610247C): 41
+LogDevObjectVersion:   Dev-PhysicsMaterial-Chaos (B68FC16E-8B1B-42E2-B453-215C058844FE): 1
+LogDevObjectVersion:   Dev-CineCamera (B2E18506-4273-CFC2-A54E-F4BB758BBA07): 1
+LogDevObjectVersion:   Dev-VirtualProduction (64F58936-FD1B-42BA-BA96-7289D5D0FA4E): 1
+LogDevObjectVersion:   UE5-Main (697DD581-E64F-41AB-AA4A-51ECBEB7B628): 88
+LogDevObjectVersion:   UE5-Release (D89B5E42-24BD-4D46-8412-ACA8DF641779): 41
+LogDevObjectVersion:   UE5-PrivateFrosty (59DA5D52-1232-4948-B878-597870B8E98B): 8
+LogDevObjectVersion:   UE5-Dev-Cooker (26075A32-730F-4708-88E9-8C32F1599D05): 0
+LogDevObjectVersion:   Dev-MediaFramework (6F0ED827-A609-4895-9C91-998D90180EA4): 2
+LogDevObjectVersion:   UE5-Dev-LWCRendering (30D58BE3-95EA-4282-A6E3-B159D8EBB06A): 1
+LogInit: Presizing for max 100000 objects, including 0 objects not considered by GC, pre-allocating 0 bytes for permanent pool.
+LogInit: Object subsystem initialized
+LogConfig: Applying CVar settings from Section [Startup] File [../../../Engine/Config/ConsoleVariables.ini]
+LogConfig: Applying CVar settings from Section [ConsoleVariables] File [Engine]
+LogInit: Computer: DESKTOP-SKU21QN
+LogInit: User: admin
+LogInit: CPU Page size=4096, Cores=12
+LogInit: High frequency timer resolution =10.000000 MHz
+LogMemory: Memory total: Physical=31.8GB (32GB approx)
+LogMemory: Platform Memory Stats for WindowsEditor
+LogMemory: Process Physical Memory: 48.92 MB used, 48.92 MB peak
+LogMemory: Process Virtual Memory: 86.02 MB used, 86.02 MB peak
+LogMemory: Physical Memory: 17791.61 MB used,  14746.14 MB free, 32537.75 MB total
+LogMemory: Virtual Memory: 23680.68 MB used,  29337.07 MB free, 53017.75 MB total
+LogUObjectArray: 419 objects as part of root set at end of initial load.
+LogUObjectAllocator: 88936 out of 0 bytes used by permanent object pool.
+LogUObjectArray: CloseDisregardForGC: 0/0 objects in disregard for GC pool
+LogPaths: Warning: No paths for game localization data were specifed in the game configuration.
+LogInit: Using OS detected language (zh-CN).
+LogInit: Using OS detected locale (zh-CN).
+LogInit: Warning: No paths for engine localization data were specifed in the engine configuration.
+LogTextLocalizationManager: No localization for 'zh-CN' exists, so 'en' will be used for the language.
+LogTextLocalizationManager: No localization for 'zh-CN' exists, so 'en' will be used for the locale.
+LogInit: Using OS detected language (zh-CN).
+LogInit: Using OS detected locale (zh-CN).
+LogTextLocalizationManager: No localization for 'zh-CN' exists, so 'en' will be used for the language.
+LogTextLocalizationManager: No localization for 'zh-CN' exists, so 'en' will be used for the locale.
+LogPackageLocalizationCache: Processed 2 localized package path(s) for 1 prioritized culture(s) in 0.000080 seconds
+LogInit: Setting process to per monitor DPI aware
+LogWindowsTextInputMethodSystem: Available input methods:
+LogWindowsTextInputMethodSystem:   - 中文(简体，中国) - 搜狗拼音输入法 (TSF IME).
+LogWindowsTextInputMethodSystem:   - 中文(简体，中国) - 微软拼音 (TSF IME).
+LogWindowsTextInputMethodSystem: Activated input method: 中文(简体，中国) - 搜狗拼音输入法 (TSF IME).
+LogSlate: New Slate User Created. Platform User Id 0, User Index 0, Is Virtual User: 0
+LogSlate: Slate User Registered.  User Index 0, Is Virtual User: 0
+LogSlate: Using FreeType 2.10.0
+LogSlate: SlateFontServices - WITH_FREETYPE: 1, WITH_HARFBUZZ: 1
+LogStandaloneRenderer: D3D11 adapters settings:
+LogStandaloneRenderer: D3D11 adapters:
+LogStandaloneRenderer: Testing D3D11 adapter: 0. Description: 'NVIDIA GeForce RTX 3080'. VendorId: 10de. DeviceId: 2216.
+LogStandaloneRenderer:   0. 'NVIDIA GeForce RTX 3080'. Feature level: 11_1
+LogStandaloneRenderer: Testing D3D11 adapter: 1. Description: 'Intel(R) UHD Graphics 770'. VendorId: 8086. DeviceId: 4680.
+LogStandaloneRenderer:   1. 'Intel(R) UHD Graphics 770'. Feature level: 11_1
+LogStandaloneRenderer: Testing D3D11 adapter: 2. Description: 'Microsoft Basic Render Driver'. VendorId: 1414. DeviceId: 008c.
+LogStandaloneRenderer:   2. 'Microsoft Basic Render Driver'. Feature level: 11_1
+LogStandaloneRenderer:   Skip adapter.
+LogStandaloneRenderer: Selected D3D11 Description: 'NVIDIA GeForce RTX 3080'. VendorId: 10de. DeviceId: 2216.
+LogSlate: Took 0.000099 seconds to synchronously load lazily loaded font '../../../Engine/Content/Slate/Fonts/Roboto-Regular.ttf' (155K)
+LogCore: Engine exit requested (reason: ConsoleCtrl RequestExit)
