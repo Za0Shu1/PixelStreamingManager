@@ -11,12 +11,13 @@
 #include "Internationalization/Internationalization.h"
 
 #include "CommonStyle.h"
-#include "SServerConfigWidget.h"
 #include "Widgets/SCanvas.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/SWidget.h"
+#include "Widgets/Images/SImage.h"
+#include "Widgets/Input/SButton.h"
 
 
 #define FromHex(Hex) FLinearColor::FromSRGBColor(FColor::FromHex(Hex))
@@ -32,49 +33,25 @@ static void OnRequestExit()
 	RequestEngineExit(TEXT("Pixel streaming manager closed"));
 }
 
-
-int WINAPI WinMain(_In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR, _In_ int nCmdShow)
+class FPixelStreamingManager
 {
-	// start up the main loop
-	GEngineLoop.PreInit(GetCommandLineW());
-	check(GConfig && GConfig->IsReadyForUse());
-
-	// Initialize high DPI mode
-	FSlateApplication::InitHighDPI(true);
+public:
+	FPixelStreamingManager(FSlateApplication& InSlate)
+		:Slate(InSlate)
 	{
-		// Create the platform slate application (what FSlateApplication::Get() returns)
-		TSharedRef<FSlateApplication> Slate = FSlateApplication::Create(MakeShareable(FPlatformApplicationMisc::CreateApplication()));
-		{
-			// Initialize renderer
-			TSharedRef<FSlateRenderer> SlateRenderer = GetStandardStandaloneRenderer();
+		
+	}
+private:
+	FSlateApplication& Slate;
 
-			// Try to initialize the renderer. It's possible that we launched when the driver crashed so try a few times before giving up.
-			bool bRendererInitialized = Slate->InitializeRenderer(SlateRenderer, true);
-			if (!bRendererInitialized)
-			{
-				// Close down the Slate application
-				FSlateApplication::Shutdown();
-				return 0;
-			}
+public:
+	void Run()
+	{
+		const FSlateBrush* icon = FPSManagerStyle::Get().GetBrush(TEXT("CustomAppIcon"));
+		FText TitleText = FText(LOCTEXT("PixelStreamingManager", "Pixel Streaming Global Manager"));
 
-			// Set the normal UE IsEngineExitRequested() when outer frame is closed
-			Slate->SetExitRequestedHandler(FSimpleDelegate::CreateStatic(&OnRequestExit));
-
-			// Prepare the custom Slate styles
-			FPSManagerStyle::Initialize();
-
-			// Set the icon
-			//FAppStyle::SetAppStyleSet(FPSManagerStyle::Get());
-			//FSlateApplication::Get().SetAppIcon(FCoreStyle::Get().GetBrush("AppIcon"));
-
-			// build the window
-			const FSlateBrush* icon = FPSManagerStyle::Get().GetBrush(TEXT("CustomAppIcon"));
-
-			FText TitleText = FText(LOCTEXT("PixelStreamingManager", "Pixel Streaming Global Manager"));
-
-			const TSharedPtr<SServerConfigWidget> ServerConfigWidget = SNew(SServerConfigWidget);
-			
-			TSharedPtr<SWindow> MainWindow =
+		// build the window
+		TSharedPtr<SWindow> MainWindow =
 				SNew(SWindow)
 				.Title(TitleText)
 				.ClientSize(FVector2D(1280, 720))
@@ -120,10 +97,9 @@ int WINAPI WinMain(_In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance,
 									.BorderBackgroundColor(FromHex("45326666"))
 								]
 
-								// icon
 								+SOverlay::Slot()
 								.HAlign(HAlign_Fill)
-								.VAlign(VAlign_Top)
+								.VAlign(VAlign_Fill)
 								[
 									SNew(SVerticalBox)
 									// icon
@@ -141,6 +117,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance,
 									+SVerticalBox::Slot()
 									.HAlign(HAlign_Center)
 									.VAlign(VAlign_Fill)
+									.AutoHeight()
 									.Padding(FMargin(FVector4f(0,5,0,0)))
 									[
 										SNew(STextBlock)
@@ -148,16 +125,17 @@ int WINAPI WinMain(_In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance,
 										.ColorAndOpacity(FromHex("ffffff66"))
 										.Font(FCoreStyle::GetDefaultFontStyle("Regular", 14))
 									]
-
 									//properties
 									+SVerticalBox::Slot()
+									.HAlign(HAlign_Fill)
+									.VAlign(VAlign_Fill)
 									.FillHeight(1.f)
-									.Padding(FMargin(FVector4f(0,5,0,0)))
+									.Padding(FMargin(FVector4f(0,20,0,0)))
 									[
-										ServerConfigWidget.ToSharedRef()
+										SNew(SButton)
+										.OnClicked(FOnClicked::CreateRaw(this,&FPixelStreamingManager::OnButtonClick))
 									]
 								]
-								
 							]
 						]
 
@@ -181,7 +159,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance,
 						]
 					]
 				];
-			Slate->AddWindow(MainWindow.ToSharedRef());
+			Slate.AddWindow(MainWindow.ToSharedRef());
 			
 			// tick
 			while (!IsEngineExitRequested())
@@ -189,17 +167,69 @@ int WINAPI WinMain(_In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance,
 				FSlateApplication::Get().Tick();
 				FSlateApplication::Get().PumpMessages();
 			}
-			
-			// Clean up the custom styles
-			FPSManagerStyle::Shutdown();
+	}
+	
+	FReply OnButtonClick()
+	{
+		UE_LOG(LogPixelStreamingManager,Display,TEXT("Hello"));
+		return FReply::Handled();
+	}
+};
 
-			// Close down the Slate application
-			FSlateApplication::Shutdown();
+bool PixelStreamingMain(const TCHAR* CmdLine)
+{
+	// start up the main loop
+	GEngineLoop.PreInit(CmdLine);
+	check(GConfig && GConfig->IsReadyForUse());
+
+	// Initialize high DPI mode
+	FSlateApplication::InitHighDPI(true);
+	{
+		// Create the platform slate application (what FSlateApplication::Get() returns)
+		TSharedRef<FSlateApplication> Slate = FSlateApplication::Create(MakeShareable(FPlatformApplicationMisc::CreateApplication()));
+		{
+			// Initialize renderer
+			TSharedRef<FSlateRenderer> SlateRenderer = GetStandardStandaloneRenderer();
+
+			// Try to initialize the renderer. It's possible that we launched when the driver crashed so try a few times before giving up.
+			bool bRendererInitialized = Slate->InitializeRenderer(SlateRenderer, true);
+			if (!bRendererInitialized)
+			{
+				// Close down the Slate application
+				FSlateApplication::Shutdown();
+				return 0;
+			}
+
+			// Set the normal UE IsEngineExitRequested() when outer frame is closed
+			Slate->SetExitRequestedHandler(FSimpleDelegate::CreateStatic(&OnRequestExit));
+
+			// Prepare the custom Slate styles
+			FPSManagerStyle::Initialize();
+
+			// Set the icon
+			//FAppStyle::SetAppStyleSet(FPSManagerStyle::Get());
+			//FSlateApplication::Get().SetAppIcon(FCoreStyle::Get().GetBrush("AppIcon"));
+
+			// run the inner application loop
+			FPixelStreamingManager App(Slate.Get());
+			App.Run();
+
+			// unload style
+			FPSManagerStyle::Shutdown();
 		}
 		
-		FEngineLoop::AppPreExit();
-		FModuleManager::Get().UnloadModulesAtShutdown();
-		FEngineLoop::AppExit();
-		return 1;
+		// close the slate application
+		FSlateApplication::Shutdown();
 	}
+	
+	FEngineLoop::AppPreExit();
+    FModuleManager::Get().UnloadModulesAtShutdown();
+    FEngineLoop::AppExit();
+    return true;
+}
+
+int WINAPI WinMain(_In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR, _In_ int nCmdShow)
+{
+	hInstance = hInInstance;
+	return PixelStreamingMain(GetCommandLineW());
 }
