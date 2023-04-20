@@ -3,6 +3,7 @@
 
 #include "PixelStreamingManager.h"
 #include "CommonStyle.h"
+#include "FSettingsConfig.h"
 
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Images/SThrobber.h"
@@ -20,7 +21,6 @@ FDoScanTask::FDoScanTask(FOnScanFinished Callback):OnScanFinished(Callback)
 void FDoScanTask::DoWork() const
 {
 	//@todo Scan this server folder
-
 	int Index = 0;
 	while (Index++ < 1)
 	{
@@ -41,6 +41,7 @@ FPixelStreamingManager::~FPixelStreamingManager()
 	FTSTicker::GetCoreTicker().RemoveTicker(TickHandle);
 }
 
+#pragma region Mannully Hand Tick
 bool FPixelStreamingManager::Tick(float UnusedDeltaTime)
 {
 	QUICK_SCOPE_CYCLE_COUNTER(STAT_FPixelStreamingManager_Tick);
@@ -65,11 +66,15 @@ void FPixelStreamingManager::StartTicker()
 	}
 }
 
+#pragma endregion
+
+#pragma region Draw Window
 void FPixelStreamingManager::Run()
 {
 	const FSlateBrush* icon = FPSManagerStyle::Get().GetBrush(TEXT("CustomAppIcon"));
 	const FText TitleText = FText(LOCTEXT("PixelStreamingManager", "Pixel Streaming Global Manager"));
-
+	InitializeConfig();
+	
 	// build the window
 #pragma region Build Window
 	const TSharedPtr<SWindow> MainWindow =
@@ -174,13 +179,13 @@ void FPixelStreamingManager::Run()
 								.Padding(FMargin(5,0,0,0))
 								[
 									SNew(SButton)
-											.VAlign(VAlign_Center)
-											.HAlign(HAlign_Left)
-											.OnClicked_Raw(this,&FPixelStreamingManager::PickupFolder)
+									.VAlign(VAlign_Center)
+									.HAlign(HAlign_Left)
+									.OnClicked_Raw(this,&FPixelStreamingManager::PickupFolder)
 									[
 										SAssignNew(PathText,STextBlock)
-												.Text(LOCTEXT("Selectpath","..."))
-												.ToolTipText(FText::FromString("Select your webservers folder."))
+										.Text(FText::FromString(FSettingsConfig::Get().GetWebServersPath().IsEmpty() ? "..." : FSettingsConfig::Get().GetWebServersPath()))
+										.ToolTipText(FText::FromString("Select your webservers folder."))
 									]
 								]
 							]
@@ -236,7 +241,6 @@ void FPixelStreamingManager::Run()
 		];
 #pragma endregion
 	Slate.AddWindow(MainWindow.ToSharedRef());
-
 	// tick
 	while (!IsEngineExitRequested())
 	{
@@ -249,10 +253,43 @@ void FPixelStreamingManager::Run()
 	}
 }
 
+void FPixelStreamingManager::InitializeConfig()
+{
+	
+}
+
+FReply FPixelStreamingManager::PickupFolder()
+{
+	//@todo: save this folder to config, next time we launch will use it.
+	
+
+	FString WebServerPath;
+	// Prompt the user for the directory
+	if (FDesktopPlatformModule::Get()->OpenDirectoryDialog(GetActiveWindow(), LOCTEXT("SelectServerPath", "Please select your web server path.").ToString(), "", WebServerPath))
+	{
+		UE_LOG(LogPixelStreamingManager,Display,TEXT("Web servers path selected at : %s"),*WebServerPath);
+		if(PathText.IsValid())
+		{
+			PathText->SetText(FText::FromString(WebServerPath));
+			PathText->SetToolTipText(FText::FromString(WebServerPath));
+			FSettingsConfig::Get().SetWebServersPath(WebServerPath);
+		}
+	}
+	return FReply::Handled();
+}
+
+FText FPixelStreamingManager::GenerateScanToolTip() const
+{
+	const FString Result =  CanDoScan() ? "Execute Scan" : "WebServers Path is invalid,Please check.";
+	return FText::FromString(Result);
+}
+
+#pragma endregion 
+
+#pragma region Scan Task
 bool FPixelStreamingManager::CanDoScan() const
 {
-	return true;
-	return !WebServerPath.IsEmpty() && FPaths::DirectoryExists(WebServerPath);
+	return !FSettingsConfig::Get().GetWebServersPath().IsEmpty();
 }
 
 FReply FPixelStreamingManager::DoScan()
@@ -288,26 +325,4 @@ void FPixelStreamingManager::StopScan()
 		ScanningThrobber->SetVisibility(EVisibility::Collapsed);
 	}
 }
-
-FReply FPixelStreamingManager::PickupFolder()
-{
-	//@todo: save this folder to config, next time we launch will use it.
-	
-	// Prompt the user for the directory
-	if (FDesktopPlatformModule::Get()->OpenDirectoryDialog(GetActiveWindow(), LOCTEXT("SelectServerPath", "Please select your web server path.").ToString(), "", WebServerPath))
-	{
-		UE_LOG(LogPixelStreamingManager,Display,TEXT("Web servers path selected at : %s"),*WebServerPath);
-		if(PathText.IsValid())
-		{
-			PathText->SetText(FText::FromString(WebServerPath));
-			PathText->SetToolTipText(FText::FromString(WebServerPath));
-		}
-	}
-	return FReply::Handled();
-}
-
-FText FPixelStreamingManager::GenerateScanToolTip() const
-{
-	const FString Result =  CanDoScan() ? "Execute Scan" : "WebServers Path is invalid,Please check.";
-	return FText::FromString(Result);
-}
+#pragma endregion 

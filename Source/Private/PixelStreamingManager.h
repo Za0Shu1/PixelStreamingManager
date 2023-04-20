@@ -43,7 +43,6 @@ public:
 private:
 	FSlateApplication& Slate;
 	TSharedPtr<class STextBlock> PathText;
-	FString WebServerPath = "";
 	TSharedPtr<class SCircularThrobber> ScanningThrobber;
 	bool bIsScanning = false;
 	bool bScanFinished = false;
@@ -52,17 +51,28 @@ private:
 	FTSTicker::FDelegateHandle TickHandle;
 
 public:
-	
+	/****** MANNULLY TICK BEGIN ******/ 
+
 	bool Tick(float UnusedDeltaTime);
 
 	void StartTicker();
 
+	/****** MANNULLY TICK END ******/ 
+
+	/****** DRAW WINDOW BEGIN ******/
+
 	void Run();
+
+	void InitializeConfig();
 
 	FReply PickupFolder();
 
 	FText GenerateScanToolTip() const;
 
+	/****** DRAW WINDOW END ******/ 
+
+
+	/****** SCAN TASK BEGIN ******/ 
 	bool CanDoScan() const;
 
 	FReply DoScan();
@@ -75,4 +85,7 @@ public:
 	}
 	
 	void StopScan();
+	
+	/****** SCAN TASK END ******/ 
+
 };
