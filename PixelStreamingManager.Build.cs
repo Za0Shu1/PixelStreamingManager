@@ -19,7 +19,8 @@ public class PixelStreamingManager : ModuleRules
 				"CoreUObject",
 				"Slate",
 				"SlateCore",
-				"StandaloneRenderer"
+				"StandaloneRenderer",
+				"DesktopPlatform",
 		   });
 	}
 }

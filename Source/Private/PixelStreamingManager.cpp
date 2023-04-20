@@ -2,234 +2,312 @@
 
 
 #include "PixelStreamingManager.h"
-
-#include "RequiredProgramMainCPPInclude.h"
-#include "Framework/Application/SlateApplication.h"
-#include "StandaloneRenderer.h"
-#include "Widgets/DeclarativeSyntaxSupport.h"
-#include "Widgets/SWindow.h"
-#include "Internationalization/Internationalization.h"
-
 #include "CommonStyle.h"
-#include "Widgets/SCanvas.h"
-#include "Widgets/Layout/SBorder.h"
+
+#include "Widgets/Images/SImage.h"
+#include "Widgets/Images/SThrobber.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Text/STextBlock.h"
-#include "Widgets/SWidget.h"
-#include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SButton.h"
 
+DEFINE_LOG_CATEGORY(LogPixelStreamingManager);
 
-#define FromHex(Hex) FLinearColor::FromSRGBColor(FColor::FromHex(Hex))
-
-DEFINE_LOG_CATEGORY_STATIC(LogPixelStreamingManager, Log, All);
-
-#define LOCTEXT_NAMESPACE "PixelStreamingManager"
-
-IMPLEMENT_APPLICATION(PixelStreamingManager, "PixelStreamingManager");
-
-static void OnRequestExit()
+FDoScanTask::FDoScanTask(FOnScanFinished Callback):OnScanFinished(Callback)
 {
-	RequestEngineExit(TEXT("Pixel streaming manager closed"));
+		
 }
 
-class FPixelStreamingManager
+void FDoScanTask::DoWork() const
 {
-public:
-	FPixelStreamingManager(FSlateApplication& InSlate)
-		:Slate(InSlate)
+	//@todo Scan this server folder
+
+	int Index = 0;
+	while (Index++ < 1)
 	{
-		
+		UE_LOG(LogPixelStreamingManager,Warning,TEXT("Do thread work in background task..."));
+		FPlatformProcess::Sleep(2.f);
 	}
-private:
-	FSlateApplication& Slate;
+	UE_LOG(LogPixelStreamingManager,Warning,TEXT("Do Scan Finished."));
+	OnScanFinished.ExecuteIfBound();
+}
 
-public:
-	void Run()
+FPixelStreamingManager::FPixelStreamingManager(FSlateApplication& InSlate):Slate(InSlate)
+{
+		
+}
+
+FPixelStreamingManager::~FPixelStreamingManager()
+{
+	FTSTicker::GetCoreTicker().RemoveTicker(TickHandle);
+}
+
+bool FPixelStreamingManager::Tick(float UnusedDeltaTime)
+{
+	QUICK_SCOPE_CYCLE_COUNTER(STAT_FPixelStreamingManager_Tick);
+
+	if(bIsScanning)
 	{
-		const FSlateBrush* icon = FPSManagerStyle::Get().GetBrush(TEXT("CustomAppIcon"));
-		FText TitleText = FText(LOCTEXT("PixelStreamingManager", "Pixel Streaming Global Manager"));
+		if(bScanFinished)
+		{
+			UE_LOG(LogPixelStreamingManager,Warning,TEXT("Scan finished in handled tick function."));
+			StopScan();
+		}
+	}
+	
+	return true;
+}
 
-		// build the window
-		TSharedPtr<SWindow> MainWindow =
-				SNew(SWindow)
+void FPixelStreamingManager::StartTicker()
+{
+	if (!TickHandle.IsValid())
+	{
+		TickHandle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateRaw(this, &FPixelStreamingManager::Tick),0.1f);
+	}
+}
+
+void FPixelStreamingManager::Run()
+{
+	const FSlateBrush* icon = FPSManagerStyle::Get().GetBrush(TEXT("CustomAppIcon"));
+	const FText TitleText = FText(LOCTEXT("PixelStreamingManager", "Pixel Streaming Global Manager"));
+
+	// build the window
+#pragma region Build Window
+	const TSharedPtr<SWindow> MainWindow =
+		SNew(SWindow)
 				.Title(TitleText)
 				.ClientSize(FVector2D(1280, 720))
 				.IsInitiallyMaximized(false)
-				[
-					SNew(SOverlay)
-					// background 
-					+SOverlay::Slot()
-					.HAlign(HAlign_Fill)
-					.VAlign(VAlign_Fill)
-					[
-						SNew(SBorder)
+		[
+			SNew(SOverlay)
+			// background 
+			+SOverlay::Slot()
+			 .HAlign(HAlign_Fill)
+			 .VAlign(VAlign_Fill)
+			[
+				SNew(SBorder)
 						.BorderImage(FPSManagerStyle::Get().GetBrush(TEXT("Background")))
 						.BorderBackgroundColor(FLinearColor(1,1,1,0.5))
-					]
+			]
 
-					+SOverlay::Slot()
-					.HAlign(HAlign_Fill)
-					.VAlign(VAlign_Fill)
-					[
-						SNew(SHorizontalBox)
-						
-						// left panel
-						+SHorizontalBox::Slot()
-						.SizeParam(FAuto())
-						.HAlign(HAlign_Left)
-						.VAlign(VAlign_Fill)
-						.Padding(FMargin(4))
-						[
-							SNew(SBox)
+			+SOverlay::Slot()
+			 .HAlign(HAlign_Fill)
+			 .VAlign(VAlign_Fill)
+			[
+				SNew(SHorizontalBox)
+				// left panel
+				+SHorizontalBox::Slot()
+				 .SizeParam(FAuto())
+				 .HAlign(HAlign_Left)
+				 .VAlign(VAlign_Fill)
+				 .Padding(FMargin(4))
+				[
+					SNew(SBox)
 							.WidthOverride(300.f)
 							.HAlign(HAlign_Fill)
 							.VAlign(VAlign_Fill)
-							[
-								SNew(SOverlay)
-								+SOverlay::Slot()
-								.HAlign(HAlign_Fill)
-								.VAlign(VAlign_Fill)
-								[
-									// left background
-									SNew(SBorder)
+					[
+						SNew(SOverlay)
+						+SOverlay::Slot()
+						 .HAlign(HAlign_Fill)
+						 .VAlign(VAlign_Fill)
+						[
+							// left background
+							SNew(SBorder)
 									.BorderImage(FAppStyle::GetBrush("WhiteBrush"))
 									.BorderBackgroundColor(FromHex("45326666"))
-								]
+						]
 
-								+SOverlay::Slot()
-								.HAlign(HAlign_Fill)
-								.VAlign(VAlign_Fill)
-								[
-									SNew(SVerticalBox)
-									// icon
-									+SVerticalBox::Slot()
-									.HAlign(HAlign_Center)
-									.VAlign(VAlign_Top)
-									.AutoHeight()
-									.Padding(FMargin(FVector4f(0,20,0,0)))
-									[
-										SNew(SImage)
+						+SOverlay::Slot()
+						 .HAlign(HAlign_Fill)
+						 .VAlign(VAlign_Fill)
+						[
+							SNew(SVerticalBox)
+							// icon
+							+SVerticalBox::Slot()
+							 .HAlign(HAlign_Center)
+							 .VAlign(VAlign_Top)
+							 .AutoHeight()
+							 .Padding(FMargin(FVector4f(0,20,0,0)))
+							[
+								SNew(SImage)
 										.Image(icon)
 										.DesiredSizeOverride(FVector2d(48,48))
-									]
-									//name
-									+SVerticalBox::Slot()
-									.HAlign(HAlign_Center)
-									.VAlign(VAlign_Fill)
-									.AutoHeight()
-									.Padding(FMargin(FVector4f(0,5,0,0)))
-									[
-										SNew(STextBlock)
+							]
+									
+							//name
+							+SVerticalBox::Slot()
+							 .HAlign(HAlign_Center)
+							 .VAlign(VAlign_Top)
+							 .AutoHeight()
+							 .Padding(FMargin(FVector4f(0,5,0,0)))
+							[
+								SNew(STextBlock)
 										.Text(FText(LOCTEXT("PixelStreamingManager", "像素流管理平台")))
 										.ColorAndOpacity(FromHex("ffffff66"))
 										.Font(FCoreStyle::GetDefaultFontStyle("Regular", 14))
-									]
-									//properties
-									+SVerticalBox::Slot()
-									.HAlign(HAlign_Fill)
-									.VAlign(VAlign_Fill)
-									.FillHeight(1.f)
-									.Padding(FMargin(FVector4f(0,20,0,0)))
+							]
+									
+							//properties
+							+SVerticalBox::Slot()
+							 .HAlign(HAlign_Center)
+							 .VAlign(VAlign_Fill)
+							 .AutoHeight()
+							 .Padding(FMargin(FVector4f(0,20,0,0)))
+							[
+								SNew(SHorizontalBox)
+										
+								+SHorizontalBox::Slot()
+								 .VAlign(VAlign_Center)
+								 .HAlign(HAlign_Right)
+								 .Padding(FMargin(0,0,5,0))
+								[
+									SNew(SBox)
+											.WidthOverride(150)
+											.HAlign(HAlign_Right)
 									[
-										SNew(SButton)
-										.OnClicked(FOnClicked::CreateRaw(this,&FPixelStreamingManager::OnButtonClick))
+										SNew(STextBlock)
+										.Text(FText(LOCTEXT("WebServersPath", "服务器路径：")))
+									]
+								]
+										
+								+SHorizontalBox::Slot()
+								.Padding(FMargin(5,0,0,0))
+								[
+									SNew(SButton)
+											.VAlign(VAlign_Center)
+											.HAlign(HAlign_Left)
+											.OnClicked_Raw(this,&FPixelStreamingManager::PickupFolder)
+									[
+										SAssignNew(PathText,STextBlock)
+												.Text(LOCTEXT("Selectpath","..."))
+												.ToolTipText(FText::FromString("Select your webservers folder."))
 									]
 								]
 							]
-						]
 
-						// right panel
-						+SHorizontalBox::Slot()
-						.SizeParam(FStretch(1.f))
-						.HAlign(HAlign_Fill)
-						.VAlign(VAlign_Fill)
-						.Padding(FMargin(0,4,4,4))
-						[
-							SNew(SOverlay)
-							+SOverlay::Slot()
-							.HAlign(HAlign_Fill)
-							.VAlign(VAlign_Fill)
+							// commit
+							+SVerticalBox::Slot()
+							 .FillHeight(1.f)
+							 .VAlign(VAlign_Bottom)
+							 .HAlign(HAlign_Right)
 							[
-								// right background
-								SNew(SBorder)
-								.BorderImage(FAppStyle::GetBrush("WhiteBrush"))
-								.BorderBackgroundColor(FromHex("665B6666"))
+								SNew(SButton)
+										.Text(FText(LOCTEXT("ScanFolder", "扫描")))
+										.IsEnabled_Raw(this,&FPixelStreamingManager::CanDoScan)
+										.OnClicked_Raw(this,&FPixelStreamingManager::DoScan)
+										.ToolTipText_Raw(this,&FPixelStreamingManager::GenerateScanToolTip)
 							]
 						]
 					]
-				];
-			Slate.AddWindow(MainWindow.ToSharedRef());
+				]
+
+				// right panel
+				+SHorizontalBox::Slot()
+				 .SizeParam(FStretch(1.f))
+				 .HAlign(HAlign_Fill)
+				 .VAlign(VAlign_Fill)
+				 .Padding(FMargin(0,4,4,4))
+				[
+					SNew(SOverlay)
+							
+					+SOverlay::Slot()
+					 .HAlign(HAlign_Fill)
+					 .VAlign(VAlign_Fill)
+					[
+						// right background
+						SNew(SBorder)
+								.BorderImage(FAppStyle::GetBrush("WhiteBrush"))
+								.BorderBackgroundColor(FromHex("665B6666"))
+					]
+
+					+SOverlay::Slot()
+					 .HAlign(HAlign_Center)
+					 .VAlign(VAlign_Center)
+					[
+						// Circular Throbber
+						SAssignNew(ScanningThrobber,SCircularThrobber)
+								.Radius(50.f)
+								.Period(1.f)
+								.NumPieces(20)
+								.Visibility(EVisibility::Collapsed)
+					]
+				]
+			]
+		];
+#pragma endregion
+	Slate.AddWindow(MainWindow.ToSharedRef());
+
+	// tick
+	while (!IsEngineExitRequested())
+	{
+		// Tick app logic
+		FTaskGraphInterface::Get().ProcessThreadUntilIdle(ENamedThreads::GameThread);
+		FTSTicker::GetCoreTicker().Tick(0.02);
 			
-			// tick
-			while (!IsEngineExitRequested())
-			{
-				FSlateApplication::Get().Tick();
-				FSlateApplication::Get().PumpMessages();
-			}
+		FSlateApplication::Get().Tick();
+		FSlateApplication::Get().PumpMessages();
 	}
-	
-	FReply OnButtonClick()
-	{
-		UE_LOG(LogPixelStreamingManager,Display,TEXT("Hello"));
-		return FReply::Handled();
-	}
-};
-
-bool PixelStreamingMain(const TCHAR* CmdLine)
-{
-	// start up the main loop
-	GEngineLoop.PreInit(CmdLine);
-	check(GConfig && GConfig->IsReadyForUse());
-
-	// Initialize high DPI mode
-	FSlateApplication::InitHighDPI(true);
-	{
-		// Create the platform slate application (what FSlateApplication::Get() returns)
-		TSharedRef<FSlateApplication> Slate = FSlateApplication::Create(MakeShareable(FPlatformApplicationMisc::CreateApplication()));
-		{
-			// Initialize renderer
-			TSharedRef<FSlateRenderer> SlateRenderer = GetStandardStandaloneRenderer();
-
-			// Try to initialize the renderer. It's possible that we launched when the driver crashed so try a few times before giving up.
-			bool bRendererInitialized = Slate->InitializeRenderer(SlateRenderer, true);
-			if (!bRendererInitialized)
-			{
-				// Close down the Slate application
-				FSlateApplication::Shutdown();
-				return 0;
-			}
-
-			// Set the normal UE IsEngineExitRequested() when outer frame is closed
-			Slate->SetExitRequestedHandler(FSimpleDelegate::CreateStatic(&OnRequestExit));
-
-			// Prepare the custom Slate styles
-			FPSManagerStyle::Initialize();
-
-			// Set the icon
-			//FAppStyle::SetAppStyleSet(FPSManagerStyle::Get());
-			//FSlateApplication::Get().SetAppIcon(FCoreStyle::Get().GetBrush("AppIcon"));
-
-			// run the inner application loop
-			FPixelStreamingManager App(Slate.Get());
-			App.Run();
-
-			// unload style
-			FPSManagerStyle::Shutdown();
-		}
-		
-		// close the slate application
-		FSlateApplication::Shutdown();
-	}
-	
-	FEngineLoop::AppPreExit();
-    FModuleManager::Get().UnloadModulesAtShutdown();
-    FEngineLoop::AppExit();
-    return true;
 }
 
-int WINAPI WinMain(_In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR, _In_ int nCmdShow)
+bool FPixelStreamingManager::CanDoScan() const
 {
-	hInstance = hInInstance;
-	return PixelStreamingMain(GetCommandLineW());
+	return true;
+	return !WebServerPath.IsEmpty() && FPaths::DirectoryExists(WebServerPath);
+}
+
+FReply FPixelStreamingManager::DoScan()
+{
+	StartScan();
+	return FReply::Handled();
+}
+
+void FPixelStreamingManager::StartScan()
+{
+	if(ScanningThrobber.IsValid())
+	{
+		ScanningThrobber->SetVisibility(EVisibility::SelfHitTestInvisible);
+	}
+	FOnScanFinished Callback;
+	Callback.BindRaw(this,&FPixelStreamingManager::OnScanTaskFinished);
+
+	const auto ScanTask = new FAsyncTask<FDoScanTask>(Callback);
+	bIsScanning = true;
+	bScanFinished = false;
+	ScanTask->StartBackgroundTask();
+	StartTicker();
+}
+
+void FPixelStreamingManager::StopScan()
+{
+	bIsScanning = false;
+	bScanFinished = false;
+
+	// should call in game thread
+	if(ScanningThrobber.IsValid())
+	{
+		ScanningThrobber->SetVisibility(EVisibility::Collapsed);
+	}
+}
+
+FReply FPixelStreamingManager::PickupFolder()
+{
+	//@todo: save this folder to config, next time we launch will use it.
+	
+	// Prompt the user for the directory
+	if (FDesktopPlatformModule::Get()->OpenDirectoryDialog(GetActiveWindow(), LOCTEXT("SelectServerPath", "Please select your web server path.").ToString(), "", WebServerPath))
+	{
+		UE_LOG(LogPixelStreamingManager,Display,TEXT("Web servers path selected at : %s"),*WebServerPath);
+		if(PathText.IsValid())
+		{
+			PathText->SetText(FText::FromString(WebServerPath));
+			PathText->SetToolTipText(FText::FromString(WebServerPath));
+		}
+	}
+	return FReply::Handled();
+}
+
+FText FPixelStreamingManager::GenerateScanToolTip() const
+{
+	const FString Result =  CanDoScan() ? "Execute Scan" : "WebServers Path is invalid,Please check.";
+	return FText::FromString(Result);
 }
