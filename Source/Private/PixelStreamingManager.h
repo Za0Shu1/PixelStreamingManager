@@ -11,27 +11,28 @@
 
 class SBorder;
 class SBox;
+class SWrapBox;
+class STextBlock;
+class SCircularThrobber;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogPixelStreamingManager, Log, All);
 
-#define LOCTEXT_NAMESPACE "PixelStreamingManager"
 #define FromHex(Hex) FLinearColor::FromSRGBColor(FColor::FromHex(Hex))
-
-DECLARE_DELEGATE(FOnScanFinished)
 
 class FDoScanTask : public FNonAbandonableTask
 {
 public:
 	friend class FAsyncTask<FDoScanTask>;
-	FOnScanFinished OnScanFinished;
-	FDoScanTask(FOnScanFinished Callback);
+	FDoScanTask(FString WebServersPath);
 
-	void DoWork() const;
+	void DoWork();
 	
 	FORCEINLINE TStatId GetStatId() const
 	{
 		RETURN_QUICK_DECLARE_CYCLE_STAT(DoScanTask, STATGROUP_ThreadPoolAsyncTasks);
 	}
+
+	FString ScanFolder;
 };
 
 class FPixelStreamingManager
@@ -39,23 +40,35 @@ class FPixelStreamingManager
 public:
 	FPixelStreamingManager(FSlateApplication& InSlate);
 	~FPixelStreamingManager();
-	
+
 private:
 	FSlateApplication& Slate;
-	TSharedPtr<class STextBlock> PathText;
-	TSharedPtr<class SCircularThrobber> ScanningThrobber;
-	bool bIsScanning = false;
-	bool bScanFinished = false;
-	
+	TSharedPtr<STextBlock> PathText;
+	TSharedPtr<SCircularThrobber> ScanningThrobber;
+	TSharedPtr<SWrapBox> ServersContainer;
+	TSharedPtr<SBox> ContainerArea;
+	TSharedPtr<SOverlay> RightPanel;
+
 	/** To know if the ticker was started.*/
-	FTSTicker::FDelegateHandle TickHandle;
+	FTSTicker::FDelegateHandle GlobalTickHandle;
+	FTSTicker::FDelegateHandle ScanTickHandle;
+
+	FAsyncTask<FDoScanTask>* ScanTask;
+
+	float RightPanelWidth;//右侧区域宽度
+	float WrapBoxPadding = 10.f;
+	float ItemHorizontalPadding = 5.f;//服务器UI横向间隔
+	float ItemVerticalPadding = 2.f;//服务器UI纵向向间隔
+	float ItemWidth = 300.f;
+	float ItemHeight = 300.f;
 
 public:
 	/****** MANNULLY TICK BEGIN ******/ 
-
+	bool ScanTaskTick(float UnusedDeltaTime);
+	
 	bool Tick(float UnusedDeltaTime);
 
-	void StartTicker();
+	void StartScanTicker();
 
 	/****** MANNULLY TICK END ******/ 
 
@@ -69,6 +82,8 @@ public:
 
 	FText GenerateScanToolTip() const;
 
+	void OnWindowResized();
+
 	/****** DRAW WINDOW END ******/ 
 
 
@@ -78,12 +93,9 @@ public:
 	FReply DoScan();
 
 	void StartScan();
-
-	void OnScanTaskFinished()
-	{
-		bScanFinished = true;
-	}
 	
+	void StopBackgroundThread();
+
 	void StopScan();
 	
 	/****** SCAN TASK END ******/ 
