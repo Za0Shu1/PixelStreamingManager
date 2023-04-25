@@ -32,6 +32,8 @@ TSharedRef<FSlateStyleSet> FPSManagerStyle::Create()
 
 	Style->SetContentRoot(FPaths::EngineContentDir() / TEXT("Slate"));
 	Style->Set("CustomAppIcon",new FSlateImageBrush(FPaths::EngineContentDir() / TEXT("Slate") / TEXT("Icons/Icon64.png"),FVector2d(64,64)));
+	Style->Set("Stop",new FSlateImageBrush(FPaths::EngineContentDir() / TEXT("Slate") / TEXT("Icons/Stop64.png"),FVector2d(32)));
+	Style->Set("Run",new FSlateImageBrush(FPaths::EngineContentDir() / TEXT("Slate") / TEXT("Icons/Play64.png"),FVector2d(32)));
 	Style->Set("Background",new FSlateImageBrush(FPaths::EngineContentDir() / TEXT("Slate") / TEXT("Custom/background.png"),FVector2d(2560,1440)));
 	return Style;
 }

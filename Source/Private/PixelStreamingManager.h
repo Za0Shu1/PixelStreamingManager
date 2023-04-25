@@ -60,7 +60,12 @@ private:
 	float ItemHorizontalPadding = 5.f;//服务器UI横向间隔
 	float ItemVerticalPadding = 2.f;//服务器UI纵向向间隔
 	float ItemWidth = 300.f;
-	float ItemHeight = 300.f;
+	float ItemHeight = 200.f;
+	
+	const float ScrollBarThickness = 9.f;
+	const float ScrollBarPadding = 2.f;
+
+	bool bUseMatchmaker = false;
 
 public:
 	/****** MANNULLY TICK BEGIN ******/ 
@@ -81,6 +86,7 @@ public:
 	FReply PickupFolder();
 
 	FText GenerateScanToolTip() const;
+	FText GenerateLaunchMatchmakerToolTip() const;
 
 	void OnWindowResized();
 
@@ -91,13 +97,15 @@ public:
 	bool CanDoScan() const;
 
 	FReply DoScan();
+	FReply LaunchMatchMaker();
 
 	void StartScan();
 	
 	void StopBackgroundThread();
 
 	void StopScan();
-	
+	void CreateServerItem(FString Name, int32 HttpPort, bool bIsEnable);
+
 	/****** SCAN TASK END ******/ 
 
 };

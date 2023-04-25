@@ -3,8 +3,6 @@
 
 #include "PixelStreamingManager.h"
 
-#include <fmt/8.1.1/include/fmt/core.h>
-
 #include "CommonStyle.h"
 #include "FSettingsConfig.h"
 #include "SPSServerSingleton.h"
@@ -290,11 +288,30 @@ void FPixelStreamingManager::Run()
 							  .VAlign(VAlign_Bottom)
 							  .HAlign(HAlign_Right)
 							[
-								SNew(SButton)
-										.Text(FText(LOCTEXT("ScanFolder", "扫描")))
-										.IsEnabled_Raw(this, &FPixelStreamingManager::CanDoScan)
-										.OnClicked_Raw(this, &FPixelStreamingManager::DoScan)
-										.ToolTipText_Raw(this, &FPixelStreamingManager::GenerateScanToolTip)
+								SNew(SHorizontalBox)
+								
+								+ SHorizontalBox::Slot()
+								[
+									SNew(SButton)
+									.Text(FText(LOCTEXT("LaunchMatchmaker", "启动Matchmaker")))
+									.IsEnabled_Lambda([this]()
+									{
+										return CanDoScan() && bUseMatchmaker;
+									})
+									.OnClicked_Raw(this, &FPixelStreamingManager::LaunchMatchMaker)
+									.ToolTipText_Raw(this, &FPixelStreamingManager::GenerateLaunchMatchmakerToolTip)
+								]
+
+								+ SHorizontalBox::Slot()
+								.AutoWidth()
+								.Padding(FMargin(2.f,0.f,0.f,0.f))
+								[
+									SNew(SButton)
+									.Text(FText(LOCTEXT("ScanFolder", "扫描")))
+									.IsEnabled_Raw(this, &FPixelStreamingManager::CanDoScan)
+									.OnClicked_Raw(this, &FPixelStreamingManager::DoScan)
+									.ToolTipText_Raw(this, &FPixelStreamingManager::GenerateScanToolTip)
+								]
 							]
 						]
 					]
@@ -325,6 +342,8 @@ void FPixelStreamingManager::Run()
 						SNew(SScrollBox)
 						.Orientation(EOrientation::Orient_Vertical)
 						.ScrollBarVisibility(EVisibility::Visible)
+						.ScrollBarPadding(ScrollBarPadding)
+						.ScrollBarThickness(FVector2d(ScrollBarThickness))
 
 						+ SScrollBox::Slot()
 						  .Padding(FMargin(WrapBoxPadding))
@@ -409,15 +428,21 @@ FText FPixelStreamingManager::GenerateScanToolTip() const
 	return FText::FromString(Result);
 }
 
+FText FPixelStreamingManager::GenerateLaunchMatchmakerToolTip() const
+{
+	const FString Result = CanDoScan() && bUseMatchmaker ? "Launch Matchmaker service" : "Matchmaker not enable.";
+	return FText::FromString(Result);
+}
+
 void FPixelStreamingManager::OnWindowResized()
 {
 	if (ContainerArea.IsValid() && RightPanelWidth > 0.f)
 	{
-		float CurWidth = RightPanelWidth - 2 * WrapBoxPadding;
+		float CurWidth = RightPanelWidth - 2 * WrapBoxPadding - ScrollBarThickness - ScrollBarPadding * 2;
 		const float DesireWidth = CurWidth - FMath::Fmod(
 			CurWidth, ItemWidth + ItemHorizontalPadding * 2);
 		UE_LOG(LogPixelStreamingManager, Display, TEXT("Window size changed,wrapbox width resize to :%f ~ %f ."),
-		       CurWidth,
+		       RightPanelWidth,
 		       DesireWidth);
 		ContainerArea->SetWidthOverride(DesireWidth);
 	}
@@ -434,6 +459,12 @@ bool FPixelStreamingManager::CanDoScan() const
 FReply FPixelStreamingManager::DoScan()
 {
 	StartScan();
+	return FReply::Handled();
+}
+
+FReply FPixelStreamingManager::LaunchMatchMaker()
+{
+	UE_LOG(LogPixelStreamingManager, Warning, TEXT("Going to launch matchmaker service..."));
 	return FReply::Handled();
 }
 
@@ -480,16 +511,29 @@ void FPixelStreamingManager::StopScan()
 	{
 		ServersContainer->ClearChildren();
 
+		// base 
+		CreateServerItem("Base", 80, false);
+
 		int Count = 14;
 
 		for (int index = 1; index <= Count; ++index)
 		{
-			ServersContainer->AddSlot()
-			                .Padding(ItemHorizontalPadding, ItemVerticalPadding)
-			                .ForceNewLine(false)
-			[
-				SNew(SPSServerSingleton)
-			];
+			CreateServerItem("Copy" + FString::FromInt(index), 80 + index, true);
 		}
 	}
+}
+
+void FPixelStreamingManager::CreateServerItem(FString Name, int32 HttpPort, bool bIsEnable)
+{
+	ServersContainer->AddSlot()
+	                .Padding(ItemHorizontalPadding, ItemVerticalPadding)
+	                .ForceNewLine(false)
+	[
+		SNew(SPSServerSingleton)
+				.Width(ItemWidth)
+				.Height(ItemHeight)
+				.Name(Name)
+				.HttpPort(HttpPort)
+				.bIsEnable(bIsEnable)
+	];
 }
