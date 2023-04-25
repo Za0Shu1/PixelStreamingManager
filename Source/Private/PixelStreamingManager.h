@@ -81,10 +81,6 @@ public:
 
 	void Run();
 
-	void InitializeConfig();
-
-	FReply PickupFolder();
-
 	FText GenerateScanToolTip() const;
 	FText GenerateLaunchMatchmakerToolTip() const;
 

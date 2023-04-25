@@ -33,9 +33,29 @@ struct FSettingsConfig
 		return WebServersPath; 
 	}
 
+	const FString& GetClientPath()
+	{
+		return ClientPath; 
+	}
+
+	const FString& GetPublicIP()
+	{
+		return PublicIP; 
+	}
+
 	const FString& GetProjectName()
 	{
 		return ProjectName; 
+	}
+
+	const bool& GetIsPublic() const
+	{
+		return bIsPublic; 
+	}
+
+	const bool& GetUseMatchmaker() const
+	{
+		return bUseMatchmaker; 
 	}
 
 	const bool& IsServerValid() const
@@ -50,13 +70,25 @@ struct FSettingsConfig
 	
 	/**** Setter ****/
 	void SetWebServersPath(FString InPath);
+	void SetClientPath(FString InPath);
+	void SetPublicIP(FString InIPAddr);
 	void SetProjectName(FString NewName);
+	void SetIsPublic(bool InBool);
+	void SetUseMatchmaker(bool InBool);
+
+	
 	void ValidServer(FString InCondition);
 
 protected:
 	FString SectionName;
-	FString ProjectName;
+	
 	FString WebServersPath;
+	FString ClientPath;
+	FString PublicIP;
+	FString ProjectName;
+	bool bIsPublic;
+	bool bUseMatchmaker;
+	
 	bool bServerValid;
 	FLaunchConfig LaunchConfig;
 

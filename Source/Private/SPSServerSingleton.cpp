@@ -15,7 +15,7 @@
 
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
 
-#define LOCTEXT_NAMESPACE "LiveCoding"
+#define LOCTEXT_NAMESPACE "SPSServerSingleton"
 #define FromHex(Hex) FLinearColor::FromSRGBColor(FColor::FromHex(Hex))
 
 SPSServerSingleton::SPSServerSingleton()
