@@ -22,7 +22,6 @@ void SPathProperty::Construct(const FArguments& InArgs)
 	Key = InArgs._Key;
 	Value = InArgs._Value;
 	AllowFileTypes = InArgs._AllowFileTypes;
-	bIsEnable = InArgs._bIsEnable;
 	bPickupFile = InArgs._bPickupFile;
 	LeftWidth = InArgs._LeftWidth;
 	OnValueChanged = InArgs._OnValueChanged;
@@ -54,7 +53,7 @@ void SPathProperty::Construct(const FArguments& InArgs)
 		  .HAlign(HAlign_Fill)
 		  .VAlign(VAlign_Center)
 		  .FillWidth(1.f)
-		  .Padding(FMargin(2.f, 0.f))
+		  .Padding(FMargin(10.f, 0.f))
 		[
 			SNew(SButton)
 			.VAlign(VAlign_Center)
@@ -80,10 +79,14 @@ FReply SPathProperty::PickupFolder()
 	{
 		// Prompt the user for the directory
 		TArray<FString> OutFiles;
+		FString DefaultPath;
+		FString FileName;
 
+		Value.Split("/",&DefaultPath,&FileName,ESearchCase::IgnoreCase,ESearchDir::FromEnd);
+		
 		if (FDesktopPlatformModule::Get()->OpenFileDialog(GetActiveWindow(),
 															   Title,
-															   Value, NewPath,AllowFileTypes, EFileDialogFlags::None, OutFiles))
+															   DefaultPath, NewPath,AllowFileTypes, EFileDialogFlags::None, OutFiles))
 		{
 			if(OutFiles.Num() == 0)
 			{

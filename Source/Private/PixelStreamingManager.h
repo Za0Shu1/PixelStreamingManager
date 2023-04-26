@@ -32,7 +32,7 @@ public:
 		RETURN_QUICK_DECLARE_CYCLE_STAT(DoScanTask, STATGROUP_ThreadPoolAsyncTasks);
 	}
 
-	FString ScanFolder;
+	FString ScanWebServersFolder;
 };
 
 class FPixelStreamingManager
@@ -64,8 +64,6 @@ private:
 	
 	const float ScrollBarThickness = 9.f;
 	const float ScrollBarPadding = 2.f;
-
-	bool bUseMatchmaker = false;
 
 public:
 	/****** MANNULLY TICK BEGIN ******/ 

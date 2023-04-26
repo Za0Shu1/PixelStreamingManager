@@ -8,6 +8,7 @@
 #include "CoreMinimal.h"
 
 class FConfigFile;
+DECLARE_LOG_CATEGORY_EXTERN(LogPSSettings, Log, All);
 
 struct FLaunchConfig
 {
@@ -15,6 +16,7 @@ public:
 	FString MatchMakerBatchPath;
 	FString SingnallingServerLocalPath;
 	FString SingnallingServerPublicPath;
+	FString SingnallingServerConfigPath;
 };
 
 struct FSettingsConfig
@@ -48,6 +50,11 @@ struct FSettingsConfig
 		return ProjectName; 
 	}
 
+	const FString& GetExtraCommands()
+	{
+		return ExtraCommands; 
+	}
+
 	const bool& GetIsPublic() const
 	{
 		return bIsPublic; 
@@ -63,6 +70,9 @@ struct FSettingsConfig
 		return bServerValid; 
 	}
 
+	const bool& IsClientValid();
+	
+
 	FLaunchConfig& GetLaunchConfig()
 	{
 		return LaunchConfig;
@@ -73,6 +83,7 @@ struct FSettingsConfig
 	void SetClientPath(FString InPath);
 	void SetPublicIP(FString InIPAddr);
 	void SetProjectName(FString NewName);
+	void SetExtraCommands(FString NewCommands);
 	void SetIsPublic(bool InBool);
 	void SetUseMatchmaker(bool InBool);
 
@@ -81,15 +92,18 @@ struct FSettingsConfig
 
 protected:
 	FString SectionName;
+	FString ServerSectionName;
 	
 	FString WebServersPath;
 	FString ClientPath;
 	FString PublicIP;
 	FString ProjectName;
+	FString ExtraCommands;
 	bool bIsPublic;
 	bool bUseMatchmaker;
 	
 	bool bServerValid;
+	bool bClientValid;
 	FLaunchConfig LaunchConfig;
 
 

@@ -8,7 +8,7 @@ class SEditableText;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogPathProperty, Log, All);
 
-DECLARE_DELEGATE_OneParam(FOnValueChanged, FString);
+DECLARE_DELEGATE_OneParam(FOnPathValueChanged, FString);
 
 class SPathProperty : public SCompoundWidget
 {
@@ -17,7 +17,6 @@ public:
 			: _Key("Key"),
 			  _Value("Value"),
 			  _AllowFileTypes(TEXT("JSON files (*.json)|*.json")),
-			  _bIsEnable(false),
 			  _bPickupFile(false),
 			  _LeftWidth(100.f),
 			  _OnValueChanged()
@@ -27,10 +26,9 @@ public:
 		SLATE_ARGUMENT(FString, Key)
 		SLATE_ARGUMENT(FString, Value)
 		SLATE_ARGUMENT(FString, AllowFileTypes)
-		SLATE_ARGUMENT(bool, bIsEnable);
 		SLATE_ARGUMENT(bool, bPickupFile);
 		SLATE_ARGUMENT(float, LeftWidth);
-		SLATE_EVENT(FOnValueChanged, OnValueChanged);
+		SLATE_EVENT(FOnPathValueChanged, OnValueChanged);
 
 	SLATE_END_ARGS()
 
@@ -38,12 +36,11 @@ public:
 	FReply PickupFolder();
 
 private:
-	bool bIsEnable;
 	bool bPickupFile;
 	FString Key;
 	FString Value;
 	FString AllowFileTypes;
 	float LeftWidth;
-	FOnValueChanged OnValueChanged;
+	FOnPathValueChanged OnValueChanged;
 	TSharedPtr<STextBlock> PathText;
 };

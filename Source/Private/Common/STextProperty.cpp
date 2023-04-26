@@ -13,7 +13,6 @@ void STextProperty::Construct(const FArguments& InArgs)
 {
 	Key = InArgs._Key;
 	Value = InArgs._Value;
-	bIsEnable = InArgs._bIsEnable;
 	LeftWidth = InArgs._LeftWidth;
 	OnValueChanged = InArgs._OnValueChanged;
 
@@ -44,12 +43,13 @@ void STextProperty::Construct(const FArguments& InArgs)
 		  .HAlign(HAlign_Fill)
 		  .VAlign(VAlign_Center)
 		  .FillWidth(1.f)
-		  .Padding(FMargin(2.f, 0.f))
+		  .Padding(FMargin(10.f, 0.f))
 		[
 			SNew(SBorder)
 			.BorderImage(FAppStyle::GetBrush("WhiteBrush"))
 			.BorderBackgroundColor(FromHex("#6161615B"))
 			.HAlign(HAlign_Fill)
+			.Padding(FMargin(10.f, 0, 0, 0))
 			[
 				SNew(SEditableText)
 				.Text(FText::FromString(Value))

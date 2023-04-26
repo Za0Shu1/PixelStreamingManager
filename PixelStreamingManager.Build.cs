@@ -21,6 +21,8 @@ public class PixelStreamingManager : ModuleRules
 				"SlateCore",
 				"StandaloneRenderer",
 				"DesktopPlatform",
+				"Json",
+				"JsonUtilities"
 		   });
 	}
 }

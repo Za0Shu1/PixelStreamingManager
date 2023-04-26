@@ -6,6 +6,7 @@
 #include "CommonStyle.h"
 #include "FSettingsConfig.h"
 #include "SPSServerSingleton.h"
+#include "Common/SBooleanProperty.h"
 #include "Common/SPathProperty.h"
 #include "Common/STextProperty.h"
 #include "HAL/FileManager.h"
@@ -24,15 +25,16 @@ DEFINE_LOG_CATEGORY(LogPixelStreamingManager);
 #define LOCTEXT_NAMESPACE "PixelStreamingManager"
 
 FDoScanTask::FDoScanTask(FString WebServersPath)
-	: ScanFolder(WebServersPath)
+	: ScanWebServersFolder(WebServersPath)
 {
 }
 
 void FDoScanTask::DoWork()
 {
-	UE_LOG(LogPixelStreamingManager, Display, TEXT("Scanning Directory : %s "), *ScanFolder);
+	UE_LOG(LogPixelStreamingManager, Display, TEXT("Scanning Directory : %s "), *ScanWebServersFolder);
 
-	IFileManager::Get().IterateDirectoryRecursively(*ScanFolder, [this](const TCHAR* Path, bool bIsDirectory)
+	// Search webservers
+	IFileManager::Get().IterateDirectoryRecursively(*ScanWebServersFolder, [this](const TCHAR* Path, bool bIsDirectory)
 	{
 		if (!bIsDirectory)
 		{
@@ -41,24 +43,24 @@ void FDoScanTask::DoWork()
 			if (FilePath.EndsWith("run.bat") && FilePath.Contains("Matchmaker"))
 			{
 				UE_LOG(LogPixelStreamingManager, Display, TEXT("Matchmaker Launch File Found at { %s }"), *FilePath);
-				FSettingsConfig::Get().ValidServer("run.bat");
 				FSettingsConfig::Get().GetLaunchConfig().MatchMakerBatchPath = FilePath;
+				FSettingsConfig::Get().ValidServer("run.bat");
 			}
 
 			if (FilePath.EndsWith("run_local.bat") && FilePath.Contains("SignallingWebServer"))
 			{
 				UE_LOG(LogPixelStreamingManager, Display, TEXT("SignallingWebServer Local Launch File Found at { %s }"),
 				       *FilePath);
-				FSettingsConfig::Get().ValidServer("run_local.bat");
 				FSettingsConfig::Get().GetLaunchConfig().SingnallingServerLocalPath = FilePath;
+				FSettingsConfig::Get().ValidServer("run_local.bat");
 			}
 
 			if (FilePath.EndsWith("Start_WithTURN_SignallingServer.ps1") && FilePath.Contains("SignallingWebServer"))
 			{
 				UE_LOG(LogPixelStreamingManager, Display,
 				       TEXT("SignallingWebServer Public Launch File Found at { %s }"), *FilePath);
-				FSettingsConfig::Get().ValidServer("Start_WithTURN_SignallingServer.ps1");
 				FSettingsConfig::Get().GetLaunchConfig().SingnallingServerPublicPath = FilePath;
+				FSettingsConfig::Get().ValidServer("Start_WithTURN_SignallingServer.ps1");
 			}
 
 			if (FilePath.Contains("turnserver.exe"))
@@ -89,6 +91,7 @@ void FDoScanTask::DoWork()
 			else if (FilePath.EndsWith("SignallingWebServer"))
 			{
 				UE_LOG(LogPixelStreamingManager, Display, TEXT("Directory Found at { %s }"), *FilePath);
+				FSettingsConfig::Get().GetLaunchConfig().SingnallingServerConfigPath = FilePath;
 				FSettingsConfig::Get().ValidServer("SignallingWebServer");
 			}
 		}
@@ -246,10 +249,13 @@ void FPixelStreamingManager::Run()
 							.Padding(FMargin(FVector4f(0, 20, 0, 0)))
 							[
 								SNew(SPathProperty)
-								.Key(TEXT("服务器路径"))
+								.Key(TEXT("Servers Path"))
 								.Value(FSettingsConfig::Get().GetWebServersPath())
 								.LeftWidth(100)
-								.bIsEnable(true)
+								.IsEnabled_Lambda([this]()
+								{
+									return true;
+								})
 								.OnValueChanged_Lambda([this](FString NewPath)
 								{
 									FSettingsConfig::Get().SetWebServersPath(NewPath);
@@ -264,10 +270,13 @@ void FPixelStreamingManager::Run()
 							.Padding(FMargin(FVector4f(0, 20, 0, 0)))
 							[
 								SNew(SPathProperty)
-								.Key(TEXT("客户端路径"))
+								.Key(TEXT("Client Path"))
 								.Value(FSettingsConfig::Get().GetClientPath())
 								.LeftWidth(100)
-								.bIsEnable(true)
+								.IsEnabled_Lambda([this]()
+								{
+									return true;
+								})
 								.bPickupFile(true)
 								.AllowFileTypes(TEXT("Exe file (*.exe)|*.exe"))
 								.OnValueChanged_Lambda([this](FString NewPath)
@@ -284,10 +293,13 @@ void FPixelStreamingManager::Run()
 							.Padding(FMargin(FVector4f(0, 20, 0, 0)))
 							[
 								SNew(STextProperty)
-								.Key(TEXT("公网IP"))
+								.Key(TEXT("Public IP"))
 								.Value(FSettingsConfig::Get().GetPublicIP())
 								.LeftWidth(100)
-								.bIsEnable(true)
+								.IsEnabled_Lambda([this]()
+								{
+									return FSettingsConfig::Get().GetIsPublic();
+								})
 								.OnValueChanged_Lambda([this](FString NewValue)
 								{
 									FSettingsConfig::Get().SetPublicIP(NewValue);
@@ -303,14 +315,85 @@ void FPixelStreamingManager::Run()
 							.Padding(FMargin(FVector4f(0, 20, 0, 0)))
 							[
 								SNew(STextProperty)
-								.Key(TEXT("项目名称"))
+								.Key(TEXT("Project Name"))
 								.Value(FSettingsConfig::Get().GetProjectName())
 								.LeftWidth(100)
-								.bIsEnable(true)
+								.IsEnabled_Lambda([this]()
+								{
+									return true;
+								})
 								.OnValueChanged_Lambda([this](FString NewValue)
 								{
 									FSettingsConfig::Get().SetProjectName(NewValue);
 									UE_LOG(LogPixelStreamingManager,Display,TEXT("Project name changed to %s ."),*NewValue);
+								})
+							]
+
+							// 客户端启动附加参数
+							+ SVerticalBox::Slot()
+							.HAlign(HAlign_Fill)
+							.VAlign(VAlign_Fill)
+							.AutoHeight()
+							.Padding(FMargin(FVector4f(0, 20, 0, 0)))
+							[
+								SNew(STextProperty)
+								.Key(TEXT("Extra commands"))
+								.Value(FSettingsConfig::Get().GetExtraCommands())
+								.LeftWidth(100)
+								.IsEnabled_Lambda([this]()
+								{
+									return true;
+								})
+								.OnValueChanged_Lambda([this](FString NewValue)
+								{
+									FSettingsConfig::Get().SetExtraCommands(NewValue);
+									UE_LOG(LogPixelStreamingManager,Display,TEXT("Extra commands changed to %s ."),*NewValue);
+								})
+							]
+
+							// 是否公网部署
+							+ SVerticalBox::Slot()
+							.HAlign(HAlign_Fill)
+							.VAlign(VAlign_Fill)
+							.AutoHeight()
+							.Padding(FMargin(FVector4f(0, 20, 0, 0)))
+							[
+								SNew(SBooleanProperty)
+								.Key(TEXT("bIsPublic"))
+								.Value(FSettingsConfig::Get().GetIsPublic())
+								.LeftWidth(100)
+								.IsEnabled_Lambda([this]()
+								{
+									return true;
+								})
+								.OnValueChanged_Lambda([this](bool NewValue)
+								{
+									FSettingsConfig::Get().SetIsPublic(NewValue);
+									FString OutInfo = NewValue ? "true" : "false";
+									UE_LOG(LogPixelStreamingManager,Display,TEXT("bIsPublic changed to %s ."),*OutInfo);
+								})
+							]
+
+							// 是否启用Matchmaker
+							+ SVerticalBox::Slot()
+							.HAlign(HAlign_Fill)
+							.VAlign(VAlign_Fill)
+							.AutoHeight()
+							.Padding(FMargin(FVector4f(0, 20, 0, 0)))
+							[
+								SNew(SBooleanProperty)
+								.Key(TEXT("bUseMatchmaker"))
+								.Value(FSettingsConfig::Get().GetUseMatchmaker())
+								.LeftWidth(100)
+								.IsEnabled_Lambda([this]()
+								{
+									return true;
+								})
+								.OnValueChanged_Lambda([this](bool NewValue)
+								{
+									FSettingsConfig::Get().SetUseMatchmaker(NewValue);
+									FString OutInfo = NewValue ? "true" : "false";
+									UE_LOG(LogPixelStreamingManager,Display,TEXT("bUseMatchmaker changed to %s ."),*OutInfo);
 								})
 							]
 
@@ -328,7 +411,7 @@ void FPixelStreamingManager::Run()
 									.Text(FText(LOCTEXT("LaunchMatchmaker", "启动Matchmaker")))
 									.IsEnabled_Lambda([this]()
 									{
-										return CanDoScan() && bUseMatchmaker;
+										return CanDoScan() && FSettingsConfig::Get().GetUseMatchmaker();
 									})
 									.OnClicked_Raw(this, &FPixelStreamingManager::LaunchMatchMaker)
 									.ToolTipText_Raw(this, &FPixelStreamingManager::GenerateLaunchMatchmakerToolTip)
@@ -438,7 +521,7 @@ FText FPixelStreamingManager::GenerateScanToolTip() const
 
 FText FPixelStreamingManager::GenerateLaunchMatchmakerToolTip() const
 {
-	const FString Result = CanDoScan() && bUseMatchmaker ? "Launch Matchmaker service" : "Matchmaker not enable.";
+	const FString Result = CanDoScan() && FSettingsConfig::Get().GetUseMatchmaker() ? "Launch Matchmaker service" : "Matchmaker not enable.";
 	return FText::FromString(Result);
 }
 
@@ -507,11 +590,19 @@ void FPixelStreamingManager::StopScan()
 		ScanningThrobber->SetVisibility(EVisibility::Collapsed);
 	}
 
+	bool bClientVaild = FSettingsConfig::Get().IsClientValid();
+	if (!bClientVaild)
+	{
+		FText Title = FText::FromString("ValidationError");
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("ClientValidError", "像素流Unreal客户端验证失败，请重新指定"), &Title);
+		return;
+	}
+
 	bool bServerValid = FSettingsConfig::Get().IsServerValid();
 	if (!bServerValid)
 	{
 		FText Title = FText::FromString("ValidationError");
-		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("ServerValidError", "像素流服务器验证失败，请手动验证"), &Title);
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("ServerValidError", "像素流服务器验证失败，请重新指定"), &Title);
 		return;
 	}
 
@@ -519,9 +610,20 @@ void FPixelStreamingManager::StopScan()
 	{
 		ServersContainer->ClearChildren();
 
-		// base 
-		CreateServerItem("Base", 80, false);
+		// @todo: read config.json to create default server readonly
+		CreateServerItem(FSettingsConfig::Get().GetProjectName(), 80, false);
 
+		if(!FSettingsConfig::Get().GetLaunchConfig().SingnallingServerConfigPath.IsEmpty())
+		{
+			UE_LOG(LogPixelStreamingManager, Display, TEXT("MatchMakerBatchPath : %s "), *FSettingsConfig::Get().GetLaunchConfig().MatchMakerBatchPath);
+			UE_LOG(LogPixelStreamingManager, Display, TEXT("SingnallingServerLocalPath : %s "), *FSettingsConfig::Get().GetLaunchConfig().SingnallingServerLocalPath);
+			UE_LOG(LogPixelStreamingManager, Display, TEXT("SingnallingServerPublicPath : %s "), *FSettingsConfig::Get().GetLaunchConfig().SingnallingServerPublicPath);
+			UE_LOG(LogPixelStreamingManager, Display, TEXT("SingnallingServerConfigPath : %s "), *FSettingsConfig::Get().GetLaunchConfig().SingnallingServerConfigPath);
+
+		}
+		
+		return;
+		// @todo: search other copy server
 		int Count = 14;
 
 		for (int index = 1; index <= Count; ++index)
