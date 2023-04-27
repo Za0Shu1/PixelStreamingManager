@@ -27,8 +27,6 @@ public:
 			  _SFUPort(-1),
 			  _StreamerPort(-1),
 			  _OnServerClick(nullptr)
-
-
 		{
 		}
 

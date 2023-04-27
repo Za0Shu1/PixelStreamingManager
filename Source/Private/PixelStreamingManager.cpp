@@ -4,6 +4,7 @@
 #include "PixelStreamingManager.h"
 
 #include "CommonStyle.h"
+#include "FileHelper.h"
 #include "FSettingsConfig.h"
 #include "SPSServerSingleton.h"
 #include "Common/SBooleanProperty.h"
@@ -36,9 +37,16 @@ void FDoScanTask::DoWork()
 	// Search webservers
 	IFileManager::Get().IterateDirectoryRecursively(*ScanWebServersFolder, [this](const TCHAR* Path, bool bIsDirectory)
 	{
+		FString FilePath(Path);
+
+		if (FilePath.Contains("Backup"))
+		{
+			// skip server copy
+			return true;
+		}
+
 		if (!bIsDirectory)
 		{
-			FString FilePath(Path);
 			FPaths::NormalizeFilename(FilePath);
 			if (FilePath.EndsWith("run.bat") && FilePath.Contains("Matchmaker"))
 			{
@@ -76,7 +84,6 @@ void FDoScanTask::DoWork()
 		}
 		else
 		{
-			FString FilePath(Path);
 			FPaths::NormalizeFilename(FilePath);
 			if (FilePath.EndsWith("Matchmaker"))
 			{
@@ -93,6 +100,11 @@ void FDoScanTask::DoWork()
 				UE_LOG(LogPixelStreamingManager, Display, TEXT("Directory Found at { %s }"), *FilePath);
 				FSettingsConfig::Get().GetLaunchConfig().SingnallingServerConfigPath = FilePath;
 				FSettingsConfig::Get().ValidServer("SignallingWebServer");
+			}
+			else if (FilePath.EndsWith("WebServers"))
+			{
+				UE_LOG(LogPixelStreamingManager, Display, TEXT("Directory Found at { %s }"), *FilePath);
+				FSettingsConfig::Get().GetLaunchConfig().ServersRoot = FilePath;
 			}
 		}
 
@@ -170,15 +182,7 @@ void FPixelStreamingManager::Run()
 				.IsInitiallyMaximized(false)
 		[
 			SNew(SOverlay)
-			// background 
-			+ SOverlay::Slot()
-			  .HAlign(HAlign_Fill)
-			  .VAlign(VAlign_Fill)
-			[
-				SNew(SBorder)
-						.BorderImage(FPSManagerStyle::Get().GetBrush(TEXT("Background")))
-						.BorderBackgroundColor(FLinearColor(1, 1, 1, 0.5))
-			]
+
 
 			+ SOverlay::Slot()
 			  .HAlign(HAlign_Fill)
@@ -204,14 +208,14 @@ void FPixelStreamingManager::Run()
 						[
 							// left background
 							SNew(SBorder)
-									.BorderImage(FAppStyle::GetBrush("WhiteBrush"))
-									.BorderBackgroundColor(FromHex("45326666"))
+							.BorderImage(FAppStyle::GetBrush("WhiteBrush"))
+							.BorderBackgroundColor(FromHex("45326666"))
 						]
 
 						+ SOverlay::Slot()
 						  .HAlign(HAlign_Fill)
 						  .VAlign(VAlign_Fill)
-						  .Padding(FMargin(10.f,5.f))
+						  .Padding(FMargin(10.f, 5.f))
 						[
 							SNew(SVerticalBox)
 							// icon
@@ -243,158 +247,165 @@ void FPixelStreamingManager::Run()
 
 							// 像素流服务器路径
 							+ SVerticalBox::Slot()
-							.HAlign(HAlign_Fill)
-							.VAlign(VAlign_Fill)
-							.AutoHeight()
-							.Padding(FMargin(FVector4f(0, 20, 0, 0)))
+							  .HAlign(HAlign_Fill)
+							  .VAlign(VAlign_Fill)
+							  .AutoHeight()
+							  .Padding(FMargin(FVector4f(0, 20, 0, 0)))
 							[
 								SNew(SPathProperty)
 								.Key(TEXT("Servers Path"))
 								.Value(FSettingsConfig::Get().GetWebServersPath())
 								.LeftWidth(100)
 								.IsEnabled_Lambda([this]()
-								{
-									return true;
-								})
+								                   {
+									                   return true;
+								                   })
 								.OnValueChanged_Lambda([this](FString NewPath)
-								{
-									FSettingsConfig::Get().SetWebServersPath(NewPath);
-									UE_LOG(LogPixelStreamingManager,Display,TEXT("WebServers path changed to %s ."),*NewPath);
-								})
+								                   {
+									                   FSettingsConfig::Get().SetWebServersPath(NewPath);
+									                   UE_LOG(LogPixelStreamingManager, Display,
+									                          TEXT("WebServers path changed to %s ."), *NewPath);
+								                   })
 							]
 							// 客户端路径
 							+ SVerticalBox::Slot()
-							.HAlign(HAlign_Fill)
-							.VAlign(VAlign_Fill)
-							.AutoHeight()
-							.Padding(FMargin(FVector4f(0, 20, 0, 0)))
+							  .HAlign(HAlign_Fill)
+							  .VAlign(VAlign_Fill)
+							  .AutoHeight()
+							  .Padding(FMargin(FVector4f(0, 20, 0, 0)))
 							[
 								SNew(SPathProperty)
 								.Key(TEXT("Client Path"))
 								.Value(FSettingsConfig::Get().GetClientPath())
 								.LeftWidth(100)
 								.IsEnabled_Lambda([this]()
-								{
-									return true;
-								})
+								                   {
+									                   return true;
+								                   })
 								.bPickupFile(true)
 								.AllowFileTypes(TEXT("Exe file (*.exe)|*.exe"))
 								.OnValueChanged_Lambda([this](FString NewPath)
-								{
-									FSettingsConfig::Get().SetClientPath(NewPath);
-									UE_LOG(LogPixelStreamingManager,Display,TEXT("Client path changed to %s ."),*NewPath);
-								})
+								                   {
+									                   FSettingsConfig::Get().SetClientPath(NewPath);
+									                   UE_LOG(LogPixelStreamingManager, Display,
+									                          TEXT("Client path changed to %s ."), *NewPath);
+								                   })
 							]
 							// 公网IP
 							+ SVerticalBox::Slot()
-							.HAlign(HAlign_Fill)
-							.VAlign(VAlign_Fill)
-							.AutoHeight()
-							.Padding(FMargin(FVector4f(0, 20, 0, 0)))
+							  .HAlign(HAlign_Fill)
+							  .VAlign(VAlign_Fill)
+							  .AutoHeight()
+							  .Padding(FMargin(FVector4f(0, 20, 0, 0)))
 							[
 								SNew(STextProperty)
 								.Key(TEXT("Public IP"))
 								.Value(FSettingsConfig::Get().GetPublicIP())
 								.LeftWidth(100)
 								.IsEnabled_Lambda([this]()
-								{
-									return FSettingsConfig::Get().GetIsPublic();
-								})
+								                   {
+									                   return FSettingsConfig::Get().GetIsPublic();
+								                   })
 								.OnValueChanged_Lambda([this](FString NewValue)
-								{
-									FSettingsConfig::Get().SetPublicIP(NewValue);
-									UE_LOG(LogPixelStreamingManager,Display,TEXT("Public changed to %s ."),*NewValue);
-								})
+								                   {
+									                   FSettingsConfig::Get().SetPublicIP(NewValue);
+									                   UE_LOG(LogPixelStreamingManager, Display,
+									                          TEXT("Public changed to %s ."), *NewValue);
+								                   })
 							]
 
 							// 项目名称
 							+ SVerticalBox::Slot()
-							.HAlign(HAlign_Fill)
-							.VAlign(VAlign_Fill)
-							.AutoHeight()
-							.Padding(FMargin(FVector4f(0, 20, 0, 0)))
+							  .HAlign(HAlign_Fill)
+							  .VAlign(VAlign_Fill)
+							  .AutoHeight()
+							  .Padding(FMargin(FVector4f(0, 20, 0, 0)))
 							[
 								SNew(STextProperty)
 								.Key(TEXT("Project Name"))
 								.Value(FSettingsConfig::Get().GetProjectName())
 								.LeftWidth(100)
 								.IsEnabled_Lambda([this]()
-								{
-									return true;
-								})
+								                   {
+									                   return true;
+								                   })
 								.OnValueChanged_Lambda([this](FString NewValue)
-								{
-									FSettingsConfig::Get().SetProjectName(NewValue);
-									UE_LOG(LogPixelStreamingManager,Display,TEXT("Project name changed to %s ."),*NewValue);
-								})
+								                   {
+									                   FSettingsConfig::Get().SetProjectName(NewValue);
+									                   UE_LOG(LogPixelStreamingManager, Display,
+									                          TEXT("Project name changed to %s ."), *NewValue);
+								                   })
 							]
 
 							// 客户端启动附加参数
 							+ SVerticalBox::Slot()
-							.HAlign(HAlign_Fill)
-							.VAlign(VAlign_Fill)
-							.AutoHeight()
-							.Padding(FMargin(FVector4f(0, 20, 0, 0)))
+							  .HAlign(HAlign_Fill)
+							  .VAlign(VAlign_Fill)
+							  .AutoHeight()
+							  .Padding(FMargin(FVector4f(0, 20, 0, 0)))
 							[
 								SNew(STextProperty)
 								.Key(TEXT("Extra commands"))
 								.Value(FSettingsConfig::Get().GetExtraCommands())
 								.LeftWidth(100)
 								.IsEnabled_Lambda([this]()
-								{
-									return true;
-								})
+								                   {
+									                   return true;
+								                   })
 								.OnValueChanged_Lambda([this](FString NewValue)
-								{
-									FSettingsConfig::Get().SetExtraCommands(NewValue);
-									UE_LOG(LogPixelStreamingManager,Display,TEXT("Extra commands changed to %s ."),*NewValue);
-								})
+								                   {
+									                   FSettingsConfig::Get().SetExtraCommands(NewValue);
+									                   UE_LOG(LogPixelStreamingManager, Display,
+									                          TEXT("Extra commands changed to %s ."), *NewValue);
+								                   })
 							]
 
 							// 是否公网部署
 							+ SVerticalBox::Slot()
-							.HAlign(HAlign_Fill)
-							.VAlign(VAlign_Fill)
-							.AutoHeight()
-							.Padding(FMargin(FVector4f(0, 20, 0, 0)))
+							  .HAlign(HAlign_Fill)
+							  .VAlign(VAlign_Fill)
+							  .AutoHeight()
+							  .Padding(FMargin(FVector4f(0, 20, 0, 0)))
 							[
 								SNew(SBooleanProperty)
 								.Key(TEXT("bIsPublic"))
 								.Value(FSettingsConfig::Get().GetIsPublic())
 								.LeftWidth(100)
 								.IsEnabled_Lambda([this]()
-								{
-									return true;
-								})
+								                      {
+									                      return true;
+								                      })
 								.OnValueChanged_Lambda([this](bool NewValue)
-								{
-									FSettingsConfig::Get().SetIsPublic(NewValue);
-									FString OutInfo = NewValue ? "true" : "false";
-									UE_LOG(LogPixelStreamingManager,Display,TEXT("bIsPublic changed to %s ."),*OutInfo);
-								})
+								                      {
+									                      FSettingsConfig::Get().SetIsPublic(NewValue);
+									                      FString OutInfo = NewValue ? "true" : "false";
+									                      UE_LOG(LogPixelStreamingManager, Display,
+									                             TEXT("bIsPublic changed to %s ."), *OutInfo);
+								                      })
 							]
 
 							// 是否启用Matchmaker
 							+ SVerticalBox::Slot()
-							.HAlign(HAlign_Fill)
-							.VAlign(VAlign_Fill)
-							.AutoHeight()
-							.Padding(FMargin(FVector4f(0, 20, 0, 0)))
+							  .HAlign(HAlign_Fill)
+							  .VAlign(VAlign_Fill)
+							  .AutoHeight()
+							  .Padding(FMargin(FVector4f(0, 20, 0, 0)))
 							[
 								SNew(SBooleanProperty)
 								.Key(TEXT("bUseMatchmaker"))
 								.Value(FSettingsConfig::Get().GetUseMatchmaker())
 								.LeftWidth(100)
 								.IsEnabled_Lambda([this]()
-								{
-									return true;
-								})
+								                      {
+									                      return true;
+								                      })
 								.OnValueChanged_Lambda([this](bool NewValue)
-								{
-									FSettingsConfig::Get().SetUseMatchmaker(NewValue);
-									FString OutInfo = NewValue ? "true" : "false";
-									UE_LOG(LogPixelStreamingManager,Display,TEXT("bUseMatchmaker changed to %s ."),*OutInfo);
-								})
+								                      {
+									                      FSettingsConfig::Get().SetUseMatchmaker(NewValue);
+									                      FString OutInfo = NewValue ? "true" : "false";
+									                      UE_LOG(LogPixelStreamingManager, Display,
+									                             TEXT("bUseMatchmaker changed to %s ."), *OutInfo);
+								                      })
 							]
 
 							// commit
@@ -404,22 +415,22 @@ void FPixelStreamingManager::Run()
 							  .HAlign(HAlign_Right)
 							[
 								SNew(SHorizontalBox)
-								
+
 								+ SHorizontalBox::Slot()
 								[
 									SNew(SButton)
 									.Text(FText(LOCTEXT("LaunchMatchmaker", "启动Matchmaker")))
 									.IsEnabled_Lambda([this]()
-									{
-										return CanDoScan() && FSettingsConfig::Get().GetUseMatchmaker();
-									})
+									             {
+										             return CanDoScan() && FSettingsConfig::Get().GetUseMatchmaker();
+									             })
 									.OnClicked_Raw(this, &FPixelStreamingManager::LaunchMatchMaker)
 									.ToolTipText_Raw(this, &FPixelStreamingManager::GenerateLaunchMatchmakerToolTip)
 								]
 
 								+ SHorizontalBox::Slot()
-								.AutoWidth()
-								.Padding(FMargin(2.f,0.f,0.f,0.f))
+								  .AutoWidth()
+								  .Padding(FMargin(2.f, 0.f, 0.f, 0.f))
 								[
 									SNew(SButton)
 									.Text(FText(LOCTEXT("ScanFolder", "扫描")))
@@ -446,7 +457,7 @@ void FPixelStreamingManager::Run()
 					[
 						// right background
 						SNew(SBorder)
-						.BorderImage(FAppStyle::GetBrush("WhiteBrush"))
+						.BorderImage(FPSManagerStyle::Get().GetBrush(TEXT("Background")))
 						.BorderBackgroundColor(FromHex("665B6666"))
 					]
 
@@ -521,7 +532,9 @@ FText FPixelStreamingManager::GenerateScanToolTip() const
 
 FText FPixelStreamingManager::GenerateLaunchMatchmakerToolTip() const
 {
-	const FString Result = CanDoScan() && FSettingsConfig::Get().GetUseMatchmaker() ? "Launch Matchmaker service" : "Matchmaker not enable.";
+	const FString Result = CanDoScan() && FSettingsConfig::Get().GetUseMatchmaker()
+		                       ? "Launch Matchmaker service"
+		                       : "Matchmaker not enable.";
 	return FText::FromString(Result);
 }
 
@@ -610,30 +623,25 @@ void FPixelStreamingManager::StopScan()
 	{
 		ServersContainer->ClearChildren();
 
-		// @todo: read config.json to create default server readonly
-		CreateServerItem(FSettingsConfig::Get().GetProjectName(), 80, false);
-
-		if(!FSettingsConfig::Get().GetLaunchConfig().SingnallingServerConfigPath.IsEmpty())
+		if (!FSettingsConfig::Get().GetLaunchConfig().SingnallingServerConfigPath.IsEmpty())
 		{
-			UE_LOG(LogPixelStreamingManager, Display, TEXT("MatchMakerBatchPath : %s "), *FSettingsConfig::Get().GetLaunchConfig().MatchMakerBatchPath);
-			UE_LOG(LogPixelStreamingManager, Display, TEXT("SingnallingServerLocalPath : %s "), *FSettingsConfig::Get().GetLaunchConfig().SingnallingServerLocalPath);
-			UE_LOG(LogPixelStreamingManager, Display, TEXT("SingnallingServerPublicPath : %s "), *FSettingsConfig::Get().GetLaunchConfig().SingnallingServerPublicPath);
-			UE_LOG(LogPixelStreamingManager, Display, TEXT("SingnallingServerConfigPath : %s "), *FSettingsConfig::Get().GetLaunchConfig().SingnallingServerConfigPath);
+			SignallingServerConfig config = FileHelper::Get().LoadServerConfigFromJsonFile(
+				FSettingsConfig::Get().GetLaunchConfig().SingnallingServerConfigPath / "config.json");
 
+			CreateServerItem(FSettingsConfig::Get().GetProjectName(), config, false);
+			CreateServerItem(FSettingsConfig::Get().GetProjectName(), config);
+
+			FileHelper::Get().CopyFolderRecursively(
+				FSettingsConfig::Get().GetLaunchConfig().SingnallingServerConfigPath,
+				FSettingsConfig::Get().GetLaunchConfig().ServersRoot / "Backup",TEXT("Copy1"), true);
 		}
-		
-		return;
+
+
 		// @todo: search other copy server
-		int Count = 14;
-
-		for (int index = 1; index <= Count; ++index)
-		{
-			CreateServerItem("Copy" + FString::FromInt(index), 80 + index, true);
-		}
 	}
 }
 
-void FPixelStreamingManager::CreateServerItem(FString Name, int32 HttpPort, bool bIsEnable)
+void FPixelStreamingManager::CreateServerItem(FString Name, const SignallingServerConfig& Config, bool bIsEnable)
 {
 	ServersContainer->AddSlot()
 	                .Padding(ItemHorizontalPadding, ItemVerticalPadding)
@@ -643,7 +651,9 @@ void FPixelStreamingManager::CreateServerItem(FString Name, int32 HttpPort, bool
 				.Width(ItemWidth)
 				.Height(ItemHeight)
 				.Name(Name)
-				.HttpPort(HttpPort)
+				.HttpPort(Config.HttpPort)
+				.SFUPort(Config.SFUPort)
+				.StreamerPort(Config.StreamerPort)
 				.bIsEnable(bIsEnable)
 	];
 }

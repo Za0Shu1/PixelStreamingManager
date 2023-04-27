@@ -17,6 +17,7 @@ public:
 	FString SingnallingServerLocalPath;
 	FString SingnallingServerPublicPath;
 	FString SingnallingServerConfigPath;
+	FString ServersRoot;
 };
 
 struct FSettingsConfig

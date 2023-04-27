@@ -14,6 +14,7 @@ class SBox;
 class SWrapBox;
 class STextBlock;
 class SCircularThrobber;
+struct SignallingServerConfig;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogPixelStreamingManager, Log, All);
 
@@ -98,7 +99,7 @@ public:
 	void StopBackgroundThread();
 
 	void StopScan();
-	void CreateServerItem(FString Name, int32 HttpPort, bool bIsEnable);
+	void CreateServerItem(FString Name, const SignallingServerConfig& Config, bool bIsEnable = true);
 
 	/****** SCAN TASK END ******/ 
 

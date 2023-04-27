@@ -1,4 +1,4 @@
-﻿Log file open, 04/25/23 11:26:19
+﻿Log file open, 04/27/23 15:52:30
 LogWindows: Failed to load 'aqProf.dll' (GetLastError=126)
 LogWindows: File 'aqProf.dll' does not exist
 LogProfilingDebugging: Loading WinPixEventRuntime.dll for PIX profiling (from ../../../Engine/Binaries/ThirdParty/Windows/WinPixEventRuntime/x64).
@@ -11,7 +11,7 @@ LogWindows: Failed to load 'VtuneApi32e.dll' (GetLastError=126)
 LogWindows: File 'VtuneApi32e.dll' does not exist
 LogICUInternationalization: ICU TimeZone Detection - Raw Offset: +8:00, Platform Override: ''
 LogInit: Session CrashGUID >====================================================
-         Session CrashGUID >   UECC-Windows-748C8F8F4164C9FDCBE7A9B01032097A
+         Session CrashGUID >   UECC-Windows-1C1DBE844D09BC982D8EAD905FE32685
          Session CrashGUID >====================================================
 LogWindows: Failed to load '../../../Engine/Binaries/ThirdParty/DbgHelp/dbghelp.dll' (GetLastError=126)
 LogWindows: File '../../../Engine/Binaries/ThirdParty/DbgHelp/dbghelp.dll' does not exist
@@ -24,7 +24,7 @@ LogInit: Compiled (64-bit): Apr 18 2023 11:07:29
 LogInit: Compiled with Visual C++: 19.34.31937.00
 LogInit: Build Configuration: Development
 LogInit: Branch Name: ++UE5+Release-5.1
-LogInit: Command Line: Engine\Binaries\Win64\PixelStreamingManager.exe  -log 
+LogInit: Command Line: "D:\Epic Games\UnrealEngine\SourceCode\UE_5.1.1\UnrealEngine\Engine\Source\Programs\PixelStreamingManager\PixelStreamingManager\Engine\Binaries\Win64\PixelStreamingManager.exe" 
 LogInit: Base Directory: D:/Epic Games/UnrealEngine/SourceCode/UE_5.1.1/UnrealEngine/Engine/Source/Programs/PixelStreamingManager/PixelStreamingManager/Engine/Binaries/Win64/
 LogInit: Allocator: Mimalloc
 LogInit: Installed Engine Build: 0
@@ -74,12 +74,12 @@ LogInit: CPU Page size=4096, Cores=12
 LogInit: High frequency timer resolution =10.000000 MHz
 LogMemory: Memory total: Physical=31.8GB (32GB approx)
 LogMemory: Platform Memory Stats for WindowsEditor
-LogMemory: Process Physical Memory: 49.27 MB used, 49.27 MB peak
-LogMemory: Process Virtual Memory: 86.20 MB used, 86.20 MB peak
-LogMemory: Physical Memory: 18060.77 MB used,  14476.98 MB free, 32537.75 MB total
-LogMemory: Virtual Memory: 27040.96 MB used,  25976.78 MB free, 53017.75 MB total
-LogUObjectArray: 419 objects as part of root set at end of initial load.
-LogUObjectAllocator: 88936 out of 0 bytes used by permanent object pool.
+LogMemory: Process Physical Memory: 50.04 MB used, 50.04 MB peak
+LogMemory: Process Virtual Memory: 86.04 MB used, 86.04 MB peak
+LogMemory: Physical Memory: 18762.82 MB used,  13774.93 MB free, 32537.75 MB total
+LogMemory: Virtual Memory: 26698.35 MB used,  26319.39 MB free, 53017.75 MB total
+LogUObjectArray: 423 objects as part of root set at end of initial load.
+LogUObjectAllocator: 89464 out of 0 bytes used by permanent object pool.
 LogUObjectArray: CloseDisregardForGC: 0/0 objects in disregard for GC pool
 LogPaths: Warning: No paths for game localization data were specifed in the game configuration.
 LogInit: Using OS detected language (zh-CN).
@@ -91,7 +91,7 @@ LogInit: Using OS detected language (zh-CN).
 LogInit: Using OS detected locale (zh-CN).
 LogTextLocalizationManager: No localization for 'zh-CN' exists, so 'en' will be used for the language.
 LogTextLocalizationManager: No localization for 'zh-CN' exists, so 'en' will be used for the locale.
-LogPackageLocalizationCache: Processed 2 localized package path(s) for 1 prioritized culture(s) in 0.000083 seconds
+LogPackageLocalizationCache: Processed 2 localized package path(s) for 1 prioritized culture(s) in 0.000079 seconds
 LogInit: Setting process to per monitor DPI aware
 LogWindowsTextInputMethodSystem: Available input methods:
 LogWindowsTextInputMethodSystem:   - 中文(简体，中国) - 搜狗拼音输入法 (TSF IME).
@@ -111,17 +111,51 @@ LogStandaloneRenderer: Testing D3D11 adapter: 2. Description: 'Microsoft Basic R
 LogStandaloneRenderer:   2. 'Microsoft Basic Render Driver'. Feature level: 11_1
 LogStandaloneRenderer:   Skip adapter.
 LogStandaloneRenderer: Selected D3D11 Description: 'NVIDIA GeForce RTX 3080'. VendorId: 10de. DeviceId: 2216.
-LogSlate: Took 0.000113 seconds to synchronously load lazily loaded font '../../../Engine/Content/Slate/Fonts/Roboto-Regular.ttf' (155K)
-LogSlate: Took 0.001312 seconds to synchronously load lazily loaded font '../../../Engine/Content/Slate/Fonts/DroidSansFallback.ttf' (3848K)
+LogSlate: Took 0.003004 seconds to synchronously load lazily loaded font '../../../Engine/Content/Slate/Fonts/Roboto-Regular.ttf' (155K)
+LogSlate: Took 0.003876 seconds to synchronously load lazily loaded font '../../../Engine/Content/Slate/Fonts/DroidSansFallback.ttf' (3848K)
 LogPixelStreamingManager: Display: Window size changed,wrapbox width resize to :968.000000 ~ 930.000000 .
-LogPixelStreamingManager: Warning: Scanning Directory : E:/UnrealProjects/DeYangEducation/code/Samples 
-LogPixelStreamingManager: Warning: Directory Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/Matchmaker }
-LogPixelStreamingManager: Warning: Directory Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/SFU }
-LogPixelStreamingManager: Warning: Directory Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/SignallingWebServer }
-LogPixelStreamingManager: Warning: Matchmaker Launch File Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/Matchmaker/platform_scripts/cmd/run.bat }
-LogPixelStreamingManager: Warning: SignallingWebServer Local Launch File Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/SignallingWebServer/platform_scripts/cmd/run_local.bat }
-LogPixelStreamingManager: Warning: SignallingWebServer Public Launch File Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/SignallingWebServer/platform_scripts/cmd/Start_WithTURN_SignallingServer.ps1 }
-LogPixelStreamingManager: Warning: Turn Server APP Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/SignallingWebServer/platform_scripts/cmd/coturn/turnserver.exe }
-LogPixelStreamingManager: Warning: Node APP Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/SignallingWebServer/platform_scripts/cmd/node/node.exe }
-LogPixelStreamingManager: Warning: Scan task finished, destroy background thread.
-LogCore: Engine exit requested (reason: ConsoleCtrl RequestExit)
+LogPixelStreamingManager: Display: Project name changed to ce .
+LogPathProperty: Display: Client Path selected at : E:/UnrealProjects/TestProjects/PixelStreamingTest/Windows/PixelStreamingTest/Binaries/Win64/PixelStreamingTest.exe
+LogPixelStreamingManager: Display: Client path changed to E:/UnrealProjects/TestProjects/PixelStreamingTest/Windows/PixelStreamingTest/Binaries/Win64/PixelStreamingTest.exe .
+LogPixelStreamingManager: Display: Project name changed to 测试 .
+LogPixelStreamingManager: Display: Scanning Directory : E:/UnrealProjects/DeYangEducation/code/Samples 
+LogPixelStreamingManager: Display: Directory Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/Matchmaker }
+LogPixelStreamingManager: Display: Directory Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/SFU }
+LogPixelStreamingManager: Display: Directory Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/SignallingWebServer }
+LogPixelStreamingManager: Display: Matchmaker Launch File Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/Matchmaker/platform_scripts/cmd/run.bat }
+LogPixelStreamingManager: Display: SignallingWebServer Local Launch File Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/SignallingWebServer/platform_scripts/cmd/run_local.bat }
+LogPixelStreamingManager: Display: SignallingWebServer Public Launch File Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/SignallingWebServer/platform_scripts/cmd/Start_WithTURN_SignallingServer.ps1 }
+LogPixelStreamingManager: Display: Turn Server APP Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/SignallingWebServer/platform_scripts/cmd/coturn/turnserver.exe }
+LogPixelStreamingManager: Display: Node APP Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/SignallingWebServer/platform_scripts/cmd/node/node.exe }
+LogPixelStreamingManager: Display: Scan task finished, destroy background thread.
+LogPSSettings: Display: Product version : ++UE5+Release-5.1-CL-23058290 
+LogPSSettings: Display: File description : Third Person Game Template 
+Message dialog closed, result: Ok, title: ValidationError, text: 像素流Unreal客户端验证失败，请重新指定
+LogPixelStreamingManager: Display: Scanning Directory : E:/UnrealProjects/DeYangEducation/code/Samples 
+LogPixelStreamingManager: Display: Directory Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/Matchmaker }
+LogPixelStreamingManager: Display: Directory Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/SFU }
+LogPixelStreamingManager: Display: Directory Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/SignallingWebServer }
+LogPixelStreamingManager: Display: Matchmaker Launch File Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/Matchmaker/platform_scripts/cmd/run.bat }
+LogPixelStreamingManager: Display: SignallingWebServer Local Launch File Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/SignallingWebServer/platform_scripts/cmd/run_local.bat }
+LogPixelStreamingManager: Display: SignallingWebServer Public Launch File Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/SignallingWebServer/platform_scripts/cmd/Start_WithTURN_SignallingServer.ps1 }
+LogPixelStreamingManager: Display: Turn Server APP Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/SignallingWebServer/platform_scripts/cmd/coturn/turnserver.exe }
+LogPixelStreamingManager: Display: Node APP Found at { E:/UnrealProjects/DeYangEducation/code/Samples/PixelStreaming/WebServers/SignallingWebServer/platform_scripts/cmd/node/node.exe }
+LogPixelStreamingManager: Display: Scan task finished, destroy background thread.
+LogPSSettings: Display: Product version : ++UE5+Release-5.1-CL-23058290 
+LogPSSettings: Display: File description : Third Person Game Template 
+Message dialog closed, result: Ok, title: ValidationError, text: 像素流Unreal客户端验证失败，请重新指定
+LogSlate: Request Window 'Pixel Streaming Global Manager' being destroyed
+LogSlate: Window 'Pixel Streaming Global Manager' being destroyed
+LogCore: Engine exit requested (reason: OnRequestExit)
+LogSlate: Request Window '' being destroyed
+LogWindowsTextInputMethodSystem: Activated input method: 中文(简体，中国) - 搜狗拼音输入法 (TSF IME).
+LogCore: Engine exit requested (reason: OnRequestExit; note: exit was already requested)
+LogSlate: Slate User Destroyed.  User Index 0, Is Virtual User: 0
+LogExit: Preparing to exit.
+LogExit: Object subsystem successfully closed.
+LogModuleManager: Shutting down and abandoning module DesktopPlatform (8)
+LogModuleManager: Shutting down and abandoning module ImageWrapper (6)
+LogModuleManager: Shutting down and abandoning module InputCore (4)
+LogModuleManager: Shutting down and abandoning module CoreUObject (2)
+LogExit: Exiting.
+Log file closed, 04/27/23 16:03:13
