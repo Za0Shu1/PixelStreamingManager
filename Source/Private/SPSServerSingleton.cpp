@@ -11,6 +11,7 @@
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Input/SEditableText.h"
 #include "Widgets/SBoxPanel.h"
+#include "Widgets/Text/STextBlock.h"
 
 
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
@@ -81,15 +82,17 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 					.ButtonStyle(FCoreStyle::Get(), "NoBorder")
 					// onclick
 					.IsEnabled_Lambda([this]()
-					{
-						return GetIsEnabled() || State == EServerState::E_Running;
-					})
+					             {
+						             return GetIsEnabled() || State == EServerState::E_Running;
+					             })
 					.OnClicked_Lambda([this]()
-					{
-						State = State == EServerState::E_Running ? EServerState::E_Stop : EServerState::E_Running;
-						bIsEnable = bIsEnable ? false : true;
-						return FReply::Handled();
-					})
+					             {
+						             State = State == EServerState::E_Running
+							                     ? EServerState::E_Stop
+							                     : EServerState::E_Running;
+						             bIsEnable = bIsEnable ? false : true;
+						             return FReply::Handled();
+					             })
 					[
 						SNew(SImage)
 						// icon
@@ -112,7 +115,7 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 					.BorderBackgroundColor(FromHex("#6161615B"))
 					[
 						SAssignNew(ServerName, SEditableText)
-						.IsEnabled_Raw(this,&SPSServerSingleton::GetIsEnabled)
+						.IsEnabled_Raw(this, &SPSServerSingleton::GetIsEnabled)
 						.Text(FText::FromString(Name))
 						.Font(FAppStyle::GetFontStyle("PropertyWindow.NormalFont"))
 						.ColorAndOpacity(FromHex("#3399ff"))
@@ -125,6 +128,17 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 					]
 				]
 
+				// Operations
+				+ SOverlay::Slot()
+				  .HAlign(HAlign_Right)
+				  .VAlign(VAlign_Top)
+				  .Padding(FMargin(0.f))
+				[
+					SNew(SHorizontalBox)
+					+ SHorizontalBox::Slot()
+					.AutoWidth()
+				]
+
 				// Ports
 				+ SOverlay::Slot()
 				  .HAlign(HAlign_Fill)
@@ -135,41 +149,41 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 
 					// http port
 					+ SVerticalBox::Slot()
-					.AutoHeight()
-					.Padding(FMargin(2.f))
+					  .AutoHeight()
+					  .Padding(FMargin(2.f))
 					[
 						SNew(STextProperty)
 						.Key("Http Port")
 						.Value(FString::FromInt(HttpPort))
-						.IsEnabled_Raw(this,&SPSServerSingleton::GetIsEnabled)
+						.IsEnabled_Raw(this, &SPSServerSingleton::GetIsEnabled)
 						.LeftWidth(100.f)
 					]
 
 					// sfu port
 					+ SVerticalBox::Slot()
-					.AutoHeight()
-					.Padding(FMargin(2.f))
+					  .AutoHeight()
+					  .Padding(FMargin(2.f))
 					[
 						SNew(STextProperty)
 						.Key("SFU Port")
 						.Value(FString::FromInt(SFUPort))
-						.IsEnabled_Raw(this,&SPSServerSingleton::GetIsEnabled)
+						.IsEnabled_Raw(this, &SPSServerSingleton::GetIsEnabled)
 						.LeftWidth(100.f)
 					]
 
 					// streamer port
 					+ SVerticalBox::Slot()
-					.AutoHeight()
-					.Padding(FMargin(2.f))
+					  .AutoHeight()
+					  .Padding(FMargin(2.f))
 					[
 						SNew(STextProperty)
 						.Key("Streamer Port")
 						.Value(FString::FromInt(StreamerPort))
-						.IsEnabled_Raw(this,&SPSServerSingleton::GetIsEnabled)
+						.IsEnabled_Raw(this, &SPSServerSingleton::GetIsEnabled)
 						.LeftWidth(100.f)
 						.OnValueChanged_Lambda([](FString NewValue)
 						{
-							UE_LOG(LogTemp,Warning,TEXT("Change Value to : %s"),*NewValue);
+							UE_LOG(LogTemp, Warning, TEXT("Change Value to : %s"), *NewValue);
 						})
 					]
 

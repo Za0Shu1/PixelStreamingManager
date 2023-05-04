@@ -6,25 +6,6 @@
 
 DEFINE_LOG_CATEGORY(LogPSFileHelper);
 
-FCopyDirectoryTask::FCopyDirectoryTask(FString _SrcDir, FString _DestDir, bool _bOverwirteAllExisting)
-	:SrcDir(_SrcDir),DestDir(_DestDir),bOverwirteAllExisting(_bOverwirteAllExisting)
-{
-	
-}
-
-void FCopyDirectoryTask::DoWork()
-{
-	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-
-	if (PlatformFile.CopyDirectoryTree(*(DestDir), *SrcDir, bOverwirteAllExisting))
-	{
-		UE_LOG(LogPSFileHelper,Display,TEXT("Copy finished."));
-		//PlatformFile.DeleteDirectoryRecursively(*SrcDir);
-		return;
-	}
-	UE_LOG(LogPSFileHelper,Display,TEXT("Copy failed."));
-}
-
 SignallingServerConfig FileHelper::LoadServerConfigFromJsonFile(const FString& JsonFile)
 {
 	SignallingServerConfig Result;
@@ -57,21 +38,57 @@ SignallingServerConfig FileHelper::LoadServerConfigFromJsonFile(const FString& J
 	return Result;
 }
 
-bool FileHelper::CopyFolderRecursively(const FString& SrcDir, const FString& DestDir, const FString& DirName, bool bOverwirteAllExisting) const
+// Function to copy a folder recursively
+// callback取右值引用
+void FileHelper::CopyFolderRecursively(const FString& SrcDir, const FString& ParentDir, const FString& DirName,
+                                       bool bOverwirteAllExisting,
+                                       TUniqueFunction<void(bool)>&& CompletionCallback)
 {
-	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+	CopyCompletionCallback = MoveTemp(CompletionCallback);
+	const FString DestDir = ParentDir / DirName;
 
-	if(!FPaths::DirectoryExists(DestDir))
+	// Get the platform file
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+	// Check if the destination directory exists
+	if (!FPaths::DirectoryExists(DestDir))
 	{
-		if(!PlatformFile.CreateDirectory(*DestDir))
+		// If not, create it
+		if (!PlatformFile.CreateDirectoryTree(*DestDir))
 		{
-			return false;
+			// If creation fails, call the completion callback with false
+			CopyCompletionCallback(false);
 		}
 	}
+	bool bSuccess = false;
 
-	FAsyncTask<FCopyDirectoryTask>* Task = new FAsyncTask<FCopyDirectoryTask>(SrcDir,DestDir / DirName,bOverwirteAllExisting);
-	Task->StartBackgroundTask();
-	
-	return false;
+	// Asynchronously copy the directory tree
+	Async(
+		EAsyncExecution::ThreadPool,
+		[&,DestDir,this]()
+		{
+			// Get the platform file
+			IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+			// Copy the directory tree
+			if (PlatformFile.CopyDirectoryTree(*DestDir, *SrcDir, bOverwirteAllExisting))
+			{
+				// Log success
+				UE_LOG(LogPSFileHelper, Display, TEXT("Copy finished."));
+				bSuccess = true;
+			}
+			else
+			{
+				// Log failure
+				UE_LOG(LogPSFileHelper, Display, TEXT("Copy failed."));
+				bSuccess = false;
+			}
+		},
+		[&,this]()
+		{
+			// Call the completion callback with result
+			AsyncTask(ENamedThreads::GameThread, [&,this]()
+			{
+				CopyCompletionCallback(bSuccess);
+			});
+		}
+	);
 }
-

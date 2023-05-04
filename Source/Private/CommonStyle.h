@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Styling/ISlateStyle.h"
+#include "Styling/SlateTypes.h"
 
 class FPSManagerStyle
 {
@@ -17,5 +18,4 @@ private:
 	static TSharedRef<FSlateStyleSet> Create();
 
 	static TSharedPtr<FSlateStyleSet> StyleSet;
-	
 };

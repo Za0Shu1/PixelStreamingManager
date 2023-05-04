@@ -24,24 +24,6 @@ public:
 	int MaxPlayerCount = -1;
 };
 
-class FCopyDirectoryTask : public FNonAbandonableTask
-{
-public:
-	friend class FAsyncTask<FCopyDirectoryTask>;
-	FCopyDirectoryTask(FString _SrcDir,FString _DestDir,bool _bOverwirteAllExisting);
-
-	void DoWork();
-	
-	FORCEINLINE TStatId GetStatId() const
-	{
-		RETURN_QUICK_DECLARE_CYCLE_STAT(DoScanTask, STATGROUP_ThreadPoolAsyncTasks);
-	}
-
-	FString SrcDir;
-	FString DestDir;
-	bool bOverwirteAllExisting;
-};
-
 class FileHelper
 {
 public:
@@ -53,17 +35,8 @@ public:
 
 	SignallingServerConfig LoadServerConfigFromJsonFile(const FString& JsonFile);
 
-	bool CopyFolderRecursively(const FString& SrcDir, const FString& DestDir, const FString& DirName, bool bOverwirteAllExisting) const;
+	void CopyFolderRecursively(const FString& SrcDir, const FString& ParentDir, const FString& DirName, bool bOverwirteAllExisting,TUniqueFunction<void(bool)>&& CompletionCallback = nullptr);
 
 private:
-	// 用于生成复制命令的脚本，使用R("")进行源码转义
-	FString CopyFileCommandTemplate = R"(
-			@echo off
-			set PasteTo=PasteToTemplate
-			set CopyFrom=CopyFromTemplate
-			set NewFolderName=NewFolderNameTemplate
-			md %CopyPath%\%NewFolderName%
-
-			xcopy /y/i/s/e %CopyFrom% %PasteTo%\%NewFolderName%
-			)";
+	TUniqueFunction<void(bool)> CopyCompletionCallback;
 };

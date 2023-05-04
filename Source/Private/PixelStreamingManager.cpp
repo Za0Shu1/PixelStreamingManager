@@ -629,11 +629,23 @@ void FPixelStreamingManager::StopScan()
 				FSettingsConfig::Get().GetLaunchConfig().SingnallingServerConfigPath / "config.json");
 
 			CreateServerItem(FSettingsConfig::Get().GetProjectName(), config, false);
-			CreateServerItem(FSettingsConfig::Get().GetProjectName(), config);
 
 			FileHelper::Get().CopyFolderRecursively(
 				FSettingsConfig::Get().GetLaunchConfig().SingnallingServerConfigPath,
-				FSettingsConfig::Get().GetLaunchConfig().ServersRoot / "Backup",TEXT("Copy1"), true);
+				FSettingsConfig::Get().GetLaunchConfig().ServersRoot / "Backup",TEXT("Copy1"), true, [](bool result)
+				{
+					if (result)
+					{
+						UE_LOG(LogPixelStreamingManager, Display, TEXT("Server File Copied."));
+						// @todo: add copied server item
+					}
+					else
+					{
+						FText Title = FText::FromString("CopyTaskResult");
+						FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("CopyError", "拷贝信令服务器失败."),
+						                     &Title);
+					}
+				});
 		}
 
 
