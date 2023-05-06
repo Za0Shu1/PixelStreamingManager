@@ -3,6 +3,7 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "DesktopPlatformModule.h"
+#include "SPSServerSingleton.h"
 #include "Async/AsyncWork.h"
 #include "Containers/Ticker.h"
 #include "DesktopPlatform/Private/Windows/WindowsNativeFeedbackContext.h"
@@ -99,7 +100,10 @@ public:
 	void StopBackgroundThread();
 
 	void StopScan();
-	void CreateServerItem(FString Name, const SignallingServerConfig& Config, bool bIsEnable = true);
+	void CreateServerItem(FString Name, const SignallingServerConfig& Config, bool bIsBackupServer = true);
+	void CopyServer(SignallingServerConfig Config, FString Name);
+	void DeleteServer(SignallingServerConfig Config, FString Name,SPSServerSingleton* Target);
+	void ServerStateChanged(SignallingServerConfig Config, EServerState State);
 
 	/****** SCAN TASK END ******/ 
 

@@ -629,31 +629,12 @@ void FPixelStreamingManager::StopScan()
 				FSettingsConfig::Get().GetLaunchConfig().SingnallingServerConfigPath / "config.json");
 
 			CreateServerItem(FSettingsConfig::Get().GetProjectName(), config, false);
-
-			FileHelper::Get().CopyFolderRecursively(
-				FSettingsConfig::Get().GetLaunchConfig().SingnallingServerConfigPath,
-				FSettingsConfig::Get().GetLaunchConfig().ServersRoot / "Backup",TEXT("Copy1"), true, [](bool result)
-				{
-					if (result)
-					{
-						UE_LOG(LogPixelStreamingManager, Display, TEXT("Server File Copied."));
-						// @todo: add copied server item
-					}
-					else
-					{
-						FText Title = FText::FromString("CopyTaskResult");
-						FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("CopyError", "拷贝信令服务器失败."),
-						                     &Title);
-					}
-				});
 		}
-
-
 		// @todo: search other copy server
 	}
 }
 
-void FPixelStreamingManager::CreateServerItem(FString Name, const SignallingServerConfig& Config, bool bIsEnable)
+void FPixelStreamingManager::CreateServerItem(FString Name, const SignallingServerConfig& Config, bool bIsBackupServer)
 {
 	ServersContainer->AddSlot()
 	                .Padding(ItemHorizontalPadding, ItemVerticalPadding)
@@ -663,11 +644,45 @@ void FPixelStreamingManager::CreateServerItem(FString Name, const SignallingServ
 				.Width(ItemWidth)
 				.Height(ItemHeight)
 				.Name(Name)
-				.HttpPort(Config.HttpPort)
-				.SFUPort(Config.SFUPort)
-				.StreamerPort(Config.StreamerPort)
-				.bIsEnable(bIsEnable)
+				.Config(Config)
+				.bIsBackupServer(bIsBackupServer)
+				.OnCreateServer_Raw(this, &FPixelStreamingManager::CopyServer)
+				.OnDeleteServer_Raw(this, &FPixelStreamingManager::DeleteServer)
+				.OnStateChanged_Raw(this, &FPixelStreamingManager::ServerStateChanged)
 	];
+}
+
+void FPixelStreamingManager::CopyServer(SignallingServerConfig Config, FString Name)
+{
+	FileHelper::Get().CopyFolderRecursively(
+		FSettingsConfig::Get().GetLaunchConfig().SingnallingServerConfigPath,
+		FSettingsConfig::Get().GetLaunchConfig().ServersRoot / "Backup",TEXT("Copy1"), true, [this,Config](bool result)
+		{
+			if (result)
+			{
+				UE_LOG(LogPixelStreamingManager, Display, TEXT("Server File Copied."));
+				CreateServerItem(FSettingsConfig::Get().GetProjectName() + "1", Config, true);
+			}
+			else
+			{
+				FText Title = FText::FromString("CopyTaskResult");
+				FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("CopyError", "拷贝信令服务器失败."),
+				                     &Title);
+			}
+		});
+}
+
+void FPixelStreamingManager::DeleteServer(SignallingServerConfig Config, FString Name,SPSServerSingleton* Target)
+{
+	if(ServersContainer.IsValid())
+	{
+		ServersContainer->RemoveSlot(StaticCastSharedRef<SPSServerSingleton>(Target->AsShared()));
+	}
+}
+
+void FPixelStreamingManager::ServerStateChanged(SignallingServerConfig Config, EServerState State)
+{
+	
 }
 
 #undef LOCTEXT_NAMESPACE

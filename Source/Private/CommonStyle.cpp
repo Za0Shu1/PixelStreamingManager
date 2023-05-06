@@ -1,7 +1,6 @@
 ﻿#include "CommonStyle.h"
 
 #include "Styling/SlateStyle.h"
-#include "Styling/SlateStyleMacros.h"
 #include "Styling/SlateStyleRegistry.h"
 #include "Styling/SlateTypes.h"
 
@@ -28,7 +27,10 @@ const ISlateStyle& FPSManagerStyle::Get()
 	return *StyleSet;
 }
 
-#define BOX_BRUSH( RelativePath, ... ) FSlateBoxBrush( RootToContentDir( RelativePath, TEXT(".png") ), __VA_ARGS__ )
+#define IMAGE_BRUSH( RelativePath, ... ) FSlateImageBrush( Style->RootToContentDir( RelativePath, TEXT(".png") ), __VA_ARGS__ )
+#define BOX_BRUSH( RelativePath, ... ) FSlateBoxBrush( Style->RootToContentDir( RelativePath, TEXT(".png") ), __VA_ARGS__ )
+#define BORDER_BRUSH( RelativePath, ... ) FSlateBorderBrush( Style->RootToContentDir( RelativePath, TEXT(".png") ), __VA_ARGS__ )
+#define DEFAULT_FONT(...) FCoreStyle::GetDefaultFontStyle(__VA_ARGS__)
 
 TSharedRef<FSlateStyleSet> FPSManagerStyle::Create()
 {
@@ -48,19 +50,17 @@ TSharedRef<FSlateStyleSet> FPSManagerStyle::Create()
 
 
 	const FButtonStyle CopyButton = FButtonStyle()
-	                                .SetNormal(FSlateBoxBrush(
-		                                FPaths::EngineContentDir() / TEXT("Slate") / TEXT("Icons/Icon64.png"),
-		                                FMargin(4 / 16.0f)))
-	                                .SetHovered(FSlateBoxBrush(
-		                                FPaths::EngineContentDir() / TEXT("Slate") / TEXT("Icons/Icon64.png"),
-		                                FMargin(4 / 16.0f)))
-	                                .SetPressed(FSlateBoxBrush(
-		                                FPaths::EngineContentDir() / TEXT("Slate") / TEXT("Icons/Icon64.png"),
-		                                FMargin(4 / 16.0f)))
-	                                .SetNormalPadding(FMargin(0, 0, 0, 1))
-	                                .SetPressedPadding(FMargin(0, 1, 0, 0));
+	                                .SetNormal(IMAGE_BRUSH("/Icons/Copy", Icon20x20))
+	                                .SetHovered(IMAGE_BRUSH("/Icons/Copy", Icon20x20))
+	                                .SetPressed(IMAGE_BRUSH("/Icons/Copy", Icon20x20));
 
 	Style->Set("CopyButton", CopyButton);
 
+	const FButtonStyle DeleteButton = FButtonStyle()
+	                                  .SetNormal(IMAGE_BRUSH("/Icons/Delete", Icon20x20))
+	                                  .SetHovered(IMAGE_BRUSH("/Icons/Delete", Icon20x20))
+	                                  .SetPressed(IMAGE_BRUSH("/Icons/Delete", Icon20x20));
+
+	Style->Set("DeleteButton", DeleteButton);
 	return Style;
 }

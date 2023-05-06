@@ -4,6 +4,7 @@
 #include "HAL/Platform.h"
 #include "Widgets/SCompoundWidget.h"
 #include "Containers/UnrealString.h"
+#include "FileHelper.h"
 
 class SEditableText;
 
@@ -13,47 +14,53 @@ enum class EServerState : uint8
 	E_Stop,
 };
 
-DECLARE_DELEGATE_OneParam(FOnServerClick, EServerState);
+DECLARE_DELEGATE_TwoParams(FOnStateChanged, SignallingServerConfig, EServerState);
+DECLARE_DELEGATE_TwoParams(FOnCreateServer, SignallingServerConfig, FString);
+DECLARE_DELEGATE_ThreeParams(FOnDeleteServer, SignallingServerConfig, FString,class SPSServerSingleton*);
 
 class SPSServerSingleton : public SCompoundWidget
 {
 public:
 	SLATE_BEGIN_ARGS(SPSServerSingleton)
-			: _bIsEnable(false),
+			: _bIsBackupServer(false),
 			  _Width(300.f),
 			  _Height(300.f),
 			  _Name(FString()),
-			  _HttpPort(-1),
-			  _SFUPort(-1),
-			  _StreamerPort(-1),
-			  _OnServerClick(nullptr)
+			  _Config(SignallingServerConfig()),
+			  _OnStateChanged(nullptr),
+			  _OnCreateServer(nullptr),
+			  _OnDeleteServer(nullptr)
+
 		{
 		}
 
-		SLATE_ARGUMENT(bool, bIsEnable)
+		SLATE_ARGUMENT(bool, bIsBackupServer)
 		SLATE_ARGUMENT(float, Width)
 		SLATE_ARGUMENT(float, Height)
 		SLATE_ARGUMENT(class FString, Name)
-		SLATE_ARGUMENT(int32, HttpPort)
-		SLATE_ARGUMENT(int32, SFUPort)
-		SLATE_ARGUMENT(int32, StreamerPort)
+		SLATE_ARGUMENT(SignallingServerConfig, Config)
 
-		SLATE_EVENT(FOnServerClick, OnServerClick)
+		SLATE_EVENT(FOnStateChanged, OnStateChanged)
+		SLATE_EVENT(FOnCreateServer, OnCreateServer)
+		SLATE_EVENT(FOnDeleteServer, OnDeleteServer)
 
 	SLATE_END_ARGS()
 
 	SPSServerSingleton();
 	~SPSServerSingleton();
 
-	bool bIsEnable;
+	bool bIsBackupServer;
 	float Width;
 	float Height;
+	SignallingServerConfig Config;
 	int32 HttpPort;
 	int32 SFUPort;
 	int32 StreamerPort;
 	EServerState State;
 	FString Name;
-	FOnServerClick OnServerClick;
+	FOnStateChanged OnStateChanged;
+	FOnCreateServer OnCreateServer;
+	FOnDeleteServer OnDeleteServer;
 
 	void Construct(const FArguments& InArgs);
 

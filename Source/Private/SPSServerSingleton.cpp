@@ -29,16 +29,19 @@ SPSServerSingleton::~SPSServerSingleton()
 
 void SPSServerSingleton::Construct(const FArguments& InArgs)
 {
-	bIsEnable = InArgs._bIsEnable;
+	bIsBackupServer = InArgs._bIsBackupServer;
 	Name = InArgs._Name;
 	Width = InArgs._Width;
 	Height = InArgs._Height;
-	OnServerClick = InArgs._OnServerClick;
 	State = EServerState::E_Stop;
+	Config = InArgs._Config;
+	HttpPort = InArgs._Config.HttpPort;
+	SFUPort = InArgs._Config.SFUPort;
+	StreamerPort = InArgs._Config.StreamerPort;
 
-	HttpPort = InArgs._HttpPort;
-	SFUPort = InArgs._SFUPort;
-	StreamerPort = InArgs._StreamerPort;
+	OnStateChanged = InArgs._OnStateChanged;
+	OnCreateServer = InArgs._OnCreateServer;
+	OnDeleteServer = InArgs._OnDeleteServer;
 
 	ChildSlot
 	[
@@ -79,6 +82,7 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 					SNew(SButton)
 					.HAlign(HAlign_Fill)
 					.VAlign(VAlign_Fill)
+					.Visibility(bIsBackupServer ? EVisibility::Visible : EVisibility::Collapsed)
 					.ButtonStyle(FCoreStyle::Get(), "NoBorder")
 					// onclick
 					.IsEnabled_Lambda([this]()
@@ -90,7 +94,6 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 						             State = State == EServerState::E_Running
 							                     ? EServerState::E_Stop
 							                     : EServerState::E_Running;
-						             bIsEnable = bIsEnable ? false : true;
 						             return FReply::Handled();
 					             })
 					[
@@ -134,12 +137,62 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 				  .VAlign(VAlign_Top)
 				  .Padding(FMargin(0.f))
 				[
+					// copy button
 					SNew(SHorizontalBox)
 					+ SHorizontalBox::Slot()
 					.AutoWidth()
-				]
+					[
+						SNew(SBox)
+						.MaxDesiredHeight(32.f)
+						.MaxDesiredWidth(32.f)
+						.Padding(FMargin(2.f, 5.f, 2.f, 0.f))
+						[
+							SNew(SButton)
+							.VAlign(VAlign_Center)
+							.HAlign(HAlign_Center)
+							.ButtonStyle(FPSManagerStyle::Get(),TEXT("CopyButton"))
+							.Visibility(EVisibility::Visible)
+							.IsEnabled_Lambda([this]()
+							             {
+								             return !bIsBackupServer || State != EServerState::E_Running;
+							             })
+							 .OnClicked_Lambda([this]()
+							             {
+								             OnCreateServer.ExecuteIfBound(Config, Name);
+								             return FReply::Handled();
+							             })
+						]
+					]
 
+					// delete button
+					+ SHorizontalBox::Slot()
+					.AutoWidth()
+					[
+						SNew(SBox)
+						.MaxDesiredHeight(32.f)
+						.MaxDesiredWidth(32.f)
+						.Padding(FMargin(2.f, 5.f, 2.f, 0.f))
+						[
+							SNew(SButton)
+							.VAlign(VAlign_Center)
+							.HAlign(HAlign_Center)
+							.ButtonStyle(FPSManagerStyle::Get(),TEXT("DeleteButton"))
+							.Visibility(bIsBackupServer ? EVisibility::Visible : EVisibility::Collapsed)
+							.IsEnabled_Lambda([this]()
+							             {
+								             return State != EServerState::E_Running;
+							             })
+				             .OnClicked_Lambda([this]()
+							             {
+								             OnDeleteServer.ExecuteIfBound(Config, Name, this);
+								             return FReply::Handled();
+							             })
+						]
+					]
+
+				]
 				// Ports
+#pragma region Ports
 				+ SOverlay::Slot()
 				  .HAlign(HAlign_Fill)
 				  .VAlign(VAlign_Fill)
@@ -188,15 +241,16 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 					]
 
 				]
-			]
+#pragma endregion
 
+			]
 		]
 	];
 }
 
 bool SPSServerSingleton::GetIsEnabled() const
 {
-	return bIsEnable;
+	return bIsBackupServer && State != EServerState::E_Running;
 }
 
 #undef LOCTEXT_NAMESPACE
