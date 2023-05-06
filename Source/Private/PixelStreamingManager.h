@@ -46,7 +46,8 @@ public:
 private:
 	FSlateApplication& Slate;
 	TSharedPtr<STextBlock> PathText;
-	TSharedPtr<SCircularThrobber> ScanningThrobber;
+	TSharedPtr<SOverlay> LoadingWidget;
+	TSharedPtr<STextBlock> LoadingText;
 	TSharedPtr<SWrapBox> ServersContainer;
 	TSharedPtr<SBox> ContainerArea;
 	TSharedPtr<SOverlay> RightPanel;
@@ -100,11 +101,15 @@ public:
 	void StopBackgroundThread();
 
 	void StopScan();
-	void CreateServerItem(FString Name, const SignallingServerConfig& Config, bool bIsBackupServer = true);
+	void CreateServerItem(FString Name, const FBackupServerInfo& Config, bool bIsBackupServer = true);
 	void CopyServer(SignallingServerConfig Config, FString Name);
 	void DeleteServer(SignallingServerConfig Config, FString Name,SPSServerSingleton* Target);
 	void ServerStateChanged(SignallingServerConfig Config, EServerState State);
 
-	/****** SCAN TASK END ******/ 
+	/****** SCAN TASK END ******/
+
+	void ShowLoadingWidget(FString DisplayName);
+
+	void HiddenLoadingWidget();
 
 };

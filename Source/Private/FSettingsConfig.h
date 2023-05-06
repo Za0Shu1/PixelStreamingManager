@@ -20,6 +20,8 @@ public:
 	FString ServersRoot;
 };
 
+
+
 struct FSettingsConfig
 {
 	static FSettingsConfig& Get() 
@@ -106,7 +108,6 @@ protected:
 	bool bServerValid;
 	bool bClientValid;
 	FLaunchConfig LaunchConfig;
-
 
 private:
 	TArray<FString> ValidationConditions;

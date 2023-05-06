@@ -491,15 +491,37 @@ void FPixelStreamingManager::Run()
 					]
 
 					+ SOverlay::Slot()
-					  .HAlign(HAlign_Center)
-					  .VAlign(VAlign_Center)
+					  .HAlign(HAlign_Fill)
+					  .VAlign(VAlign_Fill)
 					[
-						// Circular Throbber
-						SAssignNew(ScanningThrobber, SCircularThrobber)
-						.Radius(50.f)
-						.Period(1.f)
-						.NumPieces(20)
+						SAssignNew(LoadingWidget, SOverlay)
 						.Visibility(EVisibility::Collapsed)
+
+						+ SOverlay::Slot()
+						  .HAlign(HAlign_Fill)
+						  .VAlign(VAlign_Fill)
+						[
+							SNew(SImage)
+							.RenderOpacity(0.f)
+						]
+
+						+ SOverlay::Slot()
+						  .HAlign(HAlign_Center)
+						  .VAlign(VAlign_Center)
+						[
+							// Circular Throbber
+							SNew(SCircularThrobber)
+							.Radius(50.f)
+							.Period(1.f)
+							.NumPieces(20)
+						]
+
+						+ SOverlay::Slot()
+						  .HAlign(HAlign_Center)
+						  .VAlign(VAlign_Center)
+						[
+							SAssignNew(LoadingText, STextBlock)
+						]
 					]
 				]
 			]
@@ -574,10 +596,7 @@ FReply FPixelStreamingManager::LaunchMatchMaker()
 
 void FPixelStreamingManager::StartScan()
 {
-	if (ScanningThrobber.IsValid())
-	{
-		ScanningThrobber->SetVisibility(EVisibility::SelfHitTestInvisible);
-	}
+	ShowLoadingWidget("Scanning...");
 
 	ScanTask = new FAsyncTask<FDoScanTask>(FSettingsConfig::Get().GetWebServersPath());
 	ScanTask->StartBackgroundTask();
@@ -598,10 +617,7 @@ void FPixelStreamingManager::StopBackgroundThread()
 void FPixelStreamingManager::StopScan()
 {
 	// should call in game thread
-	if (ScanningThrobber.IsValid())
-	{
-		ScanningThrobber->SetVisibility(EVisibility::Collapsed);
-	}
+	HiddenLoadingWidget();
 
 	bool bClientVaild = FSettingsConfig::Get().IsClientValid();
 	if (!bClientVaild)
@@ -627,14 +643,27 @@ void FPixelStreamingManager::StopScan()
 		{
 			SignallingServerConfig config = FileHelper::Get().LoadServerConfigFromJsonFile(
 				FSettingsConfig::Get().GetLaunchConfig().SingnallingServerConfigPath / "config.json");
+			FBackupServerInfo BaseServerInfo;
+			BaseServerInfo.ServerName = FSettingsConfig::Get().GetProjectName();
+			BaseServerInfo.Config = config;
 
-			CreateServerItem(FSettingsConfig::Get().GetProjectName(), config, false);
+			CreateServerItem(BaseServerInfo.ServerName, BaseServerInfo, false);
 		}
-		// @todo: search other copy server
+
+		// load all backup server from json file
+		TArray<FBackupServerInfo> Servers = FileHelper::Get().LoadAllBackupServers(
+			FSettingsConfig::Get().GetLaunchConfig().ServersRoot / "Backup/Servers.json");
+		{
+			for (FBackupServerInfo server : Servers)
+			{
+				UE_LOG(LogPixelStreamingManager, Display, TEXT("Server : %s"), *server.ServerName);
+				CreateServerItem(server.ServerName, server, true);
+			}
+		}
 	}
 }
 
-void FPixelStreamingManager::CreateServerItem(FString Name, const SignallingServerConfig& Config, bool bIsBackupServer)
+void FPixelStreamingManager::CreateServerItem(FString Name, const FBackupServerInfo& Config, bool bIsBackupServer)
 {
 	ServersContainer->AddSlot()
 	                .Padding(ItemHorizontalPadding, ItemVerticalPadding)
@@ -644,7 +673,7 @@ void FPixelStreamingManager::CreateServerItem(FString Name, const SignallingServ
 				.Width(ItemWidth)
 				.Height(ItemHeight)
 				.Name(Name)
-				.Config(Config)
+				.Config(Config.Config)
 				.bIsBackupServer(bIsBackupServer)
 				.OnCreateServer_Raw(this, &FPixelStreamingManager::CopyServer)
 				.OnDeleteServer_Raw(this, &FPixelStreamingManager::DeleteServer)
@@ -654,14 +683,24 @@ void FPixelStreamingManager::CreateServerItem(FString Name, const SignallingServ
 
 void FPixelStreamingManager::CopyServer(SignallingServerConfig Config, FString Name)
 {
+	UE_LOG(LogPixelStreamingManager, Display, TEXT("Handle copy server request."));
+
+	ShowLoadingWidget("Copying...");
+	FBackupServerInfo CopyServerInfo;
+	CopyServerInfo.Config = Config;
+	CopyServerInfo.ServerName = "copy";
+
+	// @todo: calculate which name and ports should we use, avoid conflict with existing files
 	FileHelper::Get().CopyFolderRecursively(
 		FSettingsConfig::Get().GetLaunchConfig().SingnallingServerConfigPath,
-		FSettingsConfig::Get().GetLaunchConfig().ServersRoot / "Backup",TEXT("Copy1"), true, [this,Config](bool result)
+		FSettingsConfig::Get().GetLaunchConfig().ServersRoot / "Backup",TEXT("Copy1"), true, [this,CopyServerInfo
+		](bool result)
 		{
 			if (result)
 			{
-				UE_LOG(LogPixelStreamingManager, Display, TEXT("Server File Copied."));
-				CreateServerItem(FSettingsConfig::Get().GetProjectName() + "1", Config, true);
+				UE_LOG(LogPixelStreamingManager, Display, TEXT("Server Copied."));
+				CreateServerItem(CopyServerInfo.ServerName, CopyServerInfo, true);
+				//@todo: add config into json file after folder copied
 			}
 			else
 			{
@@ -669,12 +708,16 @@ void FPixelStreamingManager::CopyServer(SignallingServerConfig Config, FString N
 				FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("CopyError", "拷贝信令服务器失败."),
 				                     &Title);
 			}
+			HiddenLoadingWidget();
 		});
 }
 
-void FPixelStreamingManager::DeleteServer(SignallingServerConfig Config, FString Name,SPSServerSingleton* Target)
+void FPixelStreamingManager::DeleteServer(SignallingServerConfig Config, FString Name, SPSServerSingleton* Target)
 {
-	if(ServersContainer.IsValid())
+	UE_LOG(LogPixelStreamingManager, Display, TEXT("Handle delete server request."));
+	//@todo: remove folder and remove config in json file
+
+	if (ServersContainer.IsValid())
 	{
 		ServersContainer->RemoveSlot(StaticCastSharedRef<SPSServerSingleton>(Target->AsShared()));
 	}
@@ -682,7 +725,27 @@ void FPixelStreamingManager::DeleteServer(SignallingServerConfig Config, FString
 
 void FPixelStreamingManager::ServerStateChanged(SignallingServerConfig Config, EServerState State)
 {
-	
+}
+
+void FPixelStreamingManager::ShowLoadingWidget(FString DisplayName)
+{
+	if (LoadingWidget.IsValid())
+	{
+		if (LoadingText.IsValid())
+		{
+			LoadingText->SetText(FText::FromString(DisplayName));
+		}
+
+		LoadingWidget->SetVisibility(EVisibility::SelfHitTestInvisible);
+	}
+}
+
+void FPixelStreamingManager::HiddenLoadingWidget()
+{
+	if (LoadingWidget.IsValid())
+	{
+		LoadingWidget->SetVisibility(EVisibility::Collapsed);
+	}
 }
 
 #undef LOCTEXT_NAMESPACE

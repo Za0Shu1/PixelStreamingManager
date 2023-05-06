@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "CoreMinimal.h"
+#include "FSettingsConfig.h"
 #include "Async/AsyncWork.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogPSFileHelper, Log, All);
@@ -24,6 +25,15 @@ public:
 	int MaxPlayerCount = -1;
 };
 
+struct FBackupServerInfo
+{
+	FString ServerName;
+	FString SingnallingServerLocalPath;
+	FString SingnallingServerPublicPath;
+
+	SignallingServerConfig Config;
+};
+
 class FileHelper
 {
 public:
@@ -34,6 +44,7 @@ public:
 	}
 
 	SignallingServerConfig LoadServerConfigFromJsonFile(const FString& JsonFile);
+	TArray<FBackupServerInfo> LoadAllBackupServers(const FString& JsonFile);
 
 	void CopyFolderRecursively(const FString& SrcDir, const FString& ParentDir, const FString& DirName, bool bOverwirteAllExisting,TUniqueFunction<void(bool)>&& CompletionCallback = nullptr);
 

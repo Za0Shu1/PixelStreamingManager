@@ -38,6 +38,36 @@ SignallingServerConfig FileHelper::LoadServerConfigFromJsonFile(const FString& J
 	return Result;
 }
 
+TArray<FBackupServerInfo> FileHelper::LoadAllBackupServers(const FString& JsonFile)
+{
+	TArray<FBackupServerInfo> Result;
+	if (FPaths::FileExists(JsonFile))
+	{
+		FString FileStr;
+		FFileHelper::LoadFileToString(FileStr, *JsonFile);
+		TSharedPtr<FJsonObject> RootObj = MakeShareable(new FJsonObject());
+		const TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(FileStr);
+		if (FJsonSerializer::Deserialize(JsonReader, RootObj))
+		{
+			const TArray< TSharedPtr<FJsonValue> > * OutArray;
+			if (RootObj->TryGetArrayField(TEXT("Servers"), OutArray))
+			{
+				for(auto ServerInfo : *OutArray)
+				{
+					TSharedPtr<FJsonObject> obj = ServerInfo->AsObject();
+					FBackupServerInfo Temp;
+					Temp.ServerName = obj->GetStringField("ServerName");
+					Temp.SingnallingServerLocalPath = obj->GetStringField("SingnallingServerLocalPath");
+					Temp.SingnallingServerPublicPath = obj->GetStringField("SingnallingServerPublicPath");
+
+					Result.Add(Temp);
+				}
+			}
+		}
+	}
+	return Result;
+}
+
 // Function to copy a folder recursively
 // callback取右值引用
 void FileHelper::CopyFolderRecursively(const FString& SrcDir, const FString& ParentDir, const FString& DirName,
