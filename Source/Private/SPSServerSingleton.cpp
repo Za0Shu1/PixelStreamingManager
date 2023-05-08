@@ -42,6 +42,7 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 	OnStateChanged = InArgs._OnStateChanged;
 	OnCreateServer = InArgs._OnCreateServer;
 	OnDeleteServer = InArgs._OnDeleteServer;
+	OnServerRename = InArgs._OnRenameServer;
 
 	ChildSlot
 	[
@@ -123,7 +124,14 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 						.Font(FAppStyle::GetFontStyle("PropertyWindow.NormalFont"))
 						.ColorAndOpacity(FromHex("#3399ff"))
 						.SelectAllTextWhenFocused(true)
-
+						.OnTextCommitted_Lambda([this](const FText& Text, ETextCommit::Type Type)
+						{
+							if (Name != Text.ToString())
+							{
+								OnServerRename.ExecuteIfBound(this,Name,Text.ToString());
+								Name = Text.ToString();
+							}
+						})
 						.ToolTipText_Lambda([this]()
 						{
 							return ServerName->GetText();

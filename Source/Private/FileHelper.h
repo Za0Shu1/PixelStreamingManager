@@ -45,9 +45,16 @@ public:
 
 	SignallingServerConfig LoadServerConfigFromJsonFile(const FString& JsonFile);
 	TArray<FBackupServerInfo> LoadAllBackupServers(const FString& JsonFile);
+	void AddServerIntoConfig(FBackupServerInfo Config);
+	void DeleteServerFromConfig(FString ServerName);
+	void ModifyServerFromConfig(FString From,FString To);
 
 	void CopyFolderRecursively(const FString& SrcDir, const FString& ParentDir, const FString& DirName, bool bOverwirteAllExisting,TUniqueFunction<void(bool)>&& CompletionCallback = nullptr);
+	void DeleteFolder(const FString& TargetPath,TUniqueFunction<void()>&& FailedCallback);
+	void RenameFolder(const FString& From, const FString& To,TUniqueFunction<void(bool)>&& ResultCallback);
 
 private:
 	TUniqueFunction<void(bool)> CopyCompletionCallback;
+	TUniqueFunction<void()> DeleteFailedCallback;
+	TUniqueFunction<void(bool)> RenameResultCallback;
 };

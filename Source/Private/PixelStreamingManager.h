@@ -68,6 +68,8 @@ private:
 	const float ScrollBarThickness = 9.f;
 	const float ScrollBarPadding = 2.f;
 
+	TArray<FString> ExistsServerName;
+
 public:
 	/****** MANNULLY TICK BEGIN ******/ 
 	bool ScanTaskTick(float UnusedDeltaTime);
@@ -105,11 +107,18 @@ public:
 	void CopyServer(SignallingServerConfig Config, FString Name);
 	void DeleteServer(SignallingServerConfig Config, FString Name,SPSServerSingleton* Target);
 	void ServerStateChanged(SignallingServerConfig Config, EServerState State);
+	void RenameServer(SPSServerSingleton* Target, FString From, FString To);
 
 	/****** SCAN TASK END ******/
+
+	/****** COMMON FUNCTIONS BEGIN ******/ 
 
 	void ShowLoadingWidget(FString DisplayName);
 
 	void HiddenLoadingWidget();
+
+	FString AllocServerName(FString InPreferName, int SuffixIndex = 0);
+
+	/****** COMMON FUNCTIONS END ******/ 
 
 };

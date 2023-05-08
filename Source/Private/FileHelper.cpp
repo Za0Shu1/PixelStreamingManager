@@ -49,10 +49,10 @@ TArray<FBackupServerInfo> FileHelper::LoadAllBackupServers(const FString& JsonFi
 		const TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(FileStr);
 		if (FJsonSerializer::Deserialize(JsonReader, RootObj))
 		{
-			const TArray< TSharedPtr<FJsonValue> > * OutArray;
+			const TArray<TSharedPtr<FJsonValue>>* OutArray;
 			if (RootObj->TryGetArrayField(TEXT("Servers"), OutArray))
 			{
-				for(auto ServerInfo : *OutArray)
+				for (auto ServerInfo : *OutArray)
 				{
 					TSharedPtr<FJsonObject> obj = ServerInfo->AsObject();
 					FBackupServerInfo Temp;
@@ -66,6 +66,126 @@ TArray<FBackupServerInfo> FileHelper::LoadAllBackupServers(const FString& JsonFi
 		}
 	}
 	return Result;
+}
+
+void FileHelper::AddServerIntoConfig(FBackupServerInfo Config)
+{
+	TArray<FBackupServerInfo> Result;
+	const FString JsonFile = FSettingsConfig::Get().GetLaunchConfig().ServersRoot / "Backup/Servers.json";
+	if (FPaths::FileExists(JsonFile))
+	{
+		FString FileStr;
+		FFileHelper::LoadFileToString(FileStr, *JsonFile);
+		TSharedPtr<FJsonObject> RootObj = MakeShareable(new FJsonObject());
+		const TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(FileStr);
+		if (FJsonSerializer::Deserialize(JsonReader, RootObj))
+		{
+			const TArray<TSharedPtr<FJsonValue>>* OutArray;
+
+			if (RootObj->TryGetArrayField(TEXT("Servers"), OutArray))
+			{
+				TSharedPtr<FJsonObject> obj =  MakeShareable(new FJsonObject());
+				obj->SetStringField("ServerName", Config.ServerName);
+				obj->SetStringField("SingnallingServerLocalPath", Config.SingnallingServerLocalPath);
+				obj->SetStringField("SingnallingServerPublicPath", Config.SingnallingServerPublicPath);
+
+				TArray<TSharedPtr<FJsonValue>>* Temp = const_cast<TArray<TSharedPtr<FJsonValue>>*>(OutArray);
+				Temp->Add(MakeShareable(new FJsonValueObject(obj)));
+
+				RootObj->SetArrayField(TEXT("Servers"),*Temp);
+				
+				//Write the json file
+				FString Json;
+				TSharedRef<TJsonWriter<>> JsonWriter = TJsonWriterFactory<>::Create(&Json, 0);
+				if (FJsonSerializer::Serialize(RootObj.ToSharedRef(), JsonWriter))
+				{
+					FFileHelper::SaveStringToFile(Json, *JsonFile);
+				}
+			}
+		}
+	}
+}
+
+void FileHelper::DeleteServerFromConfig(FString ServerName)
+{
+	TArray<FBackupServerInfo> Result;
+	const FString JsonFile = FSettingsConfig::Get().GetLaunchConfig().ServersRoot / "Backup/Servers.json";
+	if (FPaths::FileExists(JsonFile))
+	{
+		FString FileStr;
+		FFileHelper::LoadFileToString(FileStr, *JsonFile);
+		TSharedPtr<FJsonObject> RootObj = MakeShareable(new FJsonObject());
+		const TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(FileStr);
+		if (FJsonSerializer::Deserialize(JsonReader, RootObj))
+		{
+			const TArray<TSharedPtr<FJsonValue>>* OutArray;
+
+			if (RootObj->TryGetArrayField(TEXT("Servers"), OutArray))
+			{
+				for (auto ServerInfo : *OutArray)
+				{
+					TSharedPtr<FJsonObject> obj = ServerInfo->AsObject();
+					if( obj->GetStringField("ServerName") == ServerName)
+					{
+						TArray<TSharedPtr<FJsonValue>>* Temp = const_cast<TArray<TSharedPtr<FJsonValue>>*>(OutArray);
+						Temp->Remove(ServerInfo);
+						RootObj->SetArrayField(TEXT("Servers"),*Temp);
+						break;
+					}
+				}
+
+				//Write the json file
+				FString Json;
+				TSharedRef<TJsonWriter<>> JsonWriter = TJsonWriterFactory<>::Create(&Json, 0);
+				if (FJsonSerializer::Serialize(RootObj.ToSharedRef(), JsonWriter))
+				{
+					FFileHelper::SaveStringToFile(Json, *JsonFile);
+				}
+			}
+		}
+	}
+}
+
+void FileHelper::ModifyServerFromConfig(FString From, FString To)
+{
+	TArray<FBackupServerInfo> Result;
+	const FString JsonFile = FSettingsConfig::Get().GetLaunchConfig().ServersRoot / "Backup/Servers.json";
+	if (FPaths::FileExists(JsonFile))
+	{
+		FString FileStr;
+		FFileHelper::LoadFileToString(FileStr, *JsonFile);
+		TSharedPtr<FJsonObject> RootObj = MakeShareable(new FJsonObject());
+		const TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(FileStr);
+		if (FJsonSerializer::Deserialize(JsonReader, RootObj))
+		{
+			const TArray<TSharedPtr<FJsonValue>>* OutArray;
+
+			if (RootObj->TryGetArrayField(TEXT("Servers"), OutArray))
+			{
+				for (auto ServerInfo : *OutArray)
+				{
+					TSharedPtr<FJsonObject> obj = ServerInfo->AsObject();
+					if( obj->GetStringField("ServerName") == From)
+					{
+						TArray<TSharedPtr<FJsonValue>>* Temp = const_cast<TArray<TSharedPtr<FJsonValue>>*>(OutArray);
+						Temp->Remove(ServerInfo);
+						ServerInfo->AsObject()->SetStringField("ServerName",To);
+						Temp->Add(ServerInfo);
+						RootObj->SetArrayField(TEXT("Servers"),*Temp);
+						break;
+					}
+				}
+
+				//Write the json file
+				FString Json;
+				TSharedRef<TJsonWriter<>> JsonWriter = TJsonWriterFactory<>::Create(&Json, 0);
+				if (FJsonSerializer::Serialize(RootObj.ToSharedRef(), JsonWriter))
+				{
+					FFileHelper::SaveStringToFile(Json, *JsonFile);
+				}
+			}
+		}
+	}
 }
 
 // Function to copy a folder recursively
@@ -115,9 +235,70 @@ void FileHelper::CopyFolderRecursively(const FString& SrcDir, const FString& Par
 		[&,this]()
 		{
 			// Call the completion callback with result
-			AsyncTask(ENamedThreads::GameThread, [&,this]()
+			AsyncTask(ENamedThreads::GameThread, [&,bSuccess,this]()
 			{
 				CopyCompletionCallback(bSuccess);
+			});
+		}
+	);
+}
+
+void FileHelper::DeleteFolder(const FString& TargetPath, TUniqueFunction<void()>&& FailedCallback)
+{
+	DeleteFailedCallback = MoveTemp(FailedCallback);
+
+	// Check if the destination directory exists
+	if (!FPaths::DirectoryExists(TargetPath))
+	{
+		return;
+	}
+
+	// Asynchronously delete the directory tree
+	Async(
+		EAsyncExecution::ThreadPool,
+		[&,TargetPath,this]()
+		{
+			// Get the platform file
+			IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+			// Delete the directory tree
+			if (!PlatformFile.DeleteDirectoryRecursively(*TargetPath))
+			{
+				// Call the completion callback with result
+				AsyncTask(ENamedThreads::GameThread, [&,this]()
+				{
+					DeleteFailedCallback();
+				});
+			}
+		}
+	);
+}
+
+void FileHelper::RenameFolder(const FString& From, const FString& To, TUniqueFunction<void(bool)>&& ResultCallback)
+{
+	RenameResultCallback = MoveTemp(ResultCallback);
+
+	// Check if the destination directory exists
+	if (!FPaths::DirectoryExists(From))
+	{
+		UE_LOG(LogPSFileHelper, Display, TEXT("Directory not Exists..."));
+		RenameResultCallback(false);
+		return;
+	}
+
+	// Asynchronously rename the directory
+	Async(
+		EAsyncExecution::ThreadPool,
+		[&,From,To,this]()
+		{
+			// Get the platform file
+			IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+			// Rename the directory tree
+			bool bResult = PlatformFile.MoveFile(*To,*From);
+			
+			// Call the completion callback with result
+			AsyncTask(ENamedThreads::GameThread, [&,bResult,this]()
+			{
+				RenameResultCallback(bResult);
 			});
 		}
 	);

@@ -7,6 +7,7 @@
 #include "FileHelper.h"
 
 class SEditableText;
+class SPSServerSingleton;
 
 enum class EServerState : uint8
 {
@@ -16,7 +17,8 @@ enum class EServerState : uint8
 
 DECLARE_DELEGATE_TwoParams(FOnStateChanged, SignallingServerConfig, EServerState);
 DECLARE_DELEGATE_TwoParams(FOnCreateServer, SignallingServerConfig, FString);
-DECLARE_DELEGATE_ThreeParams(FOnDeleteServer, SignallingServerConfig, FString,class SPSServerSingleton*);
+DECLARE_DELEGATE_ThreeParams(FOnDeleteServer, SignallingServerConfig, FString, SPSServerSingleton*);
+DECLARE_DELEGATE_ThreeParams(FOnServerRename, SPSServerSingleton*,FString, FString);
 
 class SPSServerSingleton : public SCompoundWidget
 {
@@ -29,7 +31,8 @@ public:
 			  _Config(SignallingServerConfig()),
 			  _OnStateChanged(nullptr),
 			  _OnCreateServer(nullptr),
-			  _OnDeleteServer(nullptr)
+			  _OnDeleteServer(nullptr),
+			  _OnRenameServer(nullptr)
 
 		{
 		}
@@ -43,6 +46,7 @@ public:
 		SLATE_EVENT(FOnStateChanged, OnStateChanged)
 		SLATE_EVENT(FOnCreateServer, OnCreateServer)
 		SLATE_EVENT(FOnDeleteServer, OnDeleteServer)
+		SLATE_EVENT(FOnServerRename, OnRenameServer)
 
 	SLATE_END_ARGS()
 
@@ -61,6 +65,7 @@ public:
 	FOnStateChanged OnStateChanged;
 	FOnCreateServer OnCreateServer;
 	FOnDeleteServer OnDeleteServer;
+	FOnServerRename OnServerRename;
 
 	void Construct(const FArguments& InArgs);
 

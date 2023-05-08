@@ -19,6 +19,7 @@
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/Input/SButton.h"
+#include "Widgets/Input/SEditableText.h"
 #include "Widgets/Layout/SScrollBox.h"
 #include "Widgets/Layout/SWrapBox.h"
 
@@ -635,6 +636,7 @@ void FPixelStreamingManager::StopScan()
 		return;
 	}
 
+	ExistsServerName.Empty();
 	if (ServersContainer.IsValid())
 	{
 		ServersContainer->ClearChildren();
@@ -644,7 +646,7 @@ void FPixelStreamingManager::StopScan()
 			SignallingServerConfig config = FileHelper::Get().LoadServerConfigFromJsonFile(
 				FSettingsConfig::Get().GetLaunchConfig().SingnallingServerConfigPath / "config.json");
 			FBackupServerInfo BaseServerInfo;
-			BaseServerInfo.ServerName = FSettingsConfig::Get().GetProjectName();
+			BaseServerInfo.ServerName = AllocServerName(FSettingsConfig::Get().GetProjectName());
 			BaseServerInfo.Config = config;
 
 			CreateServerItem(BaseServerInfo.ServerName, BaseServerInfo, false);
@@ -665,6 +667,8 @@ void FPixelStreamingManager::StopScan()
 
 void FPixelStreamingManager::CreateServerItem(FString Name, const FBackupServerInfo& Config, bool bIsBackupServer)
 {
+	ExistsServerName.Add(Name);
+
 	ServersContainer->AddSlot()
 	                .Padding(ItemHorizontalPadding, ItemVerticalPadding)
 	                .ForceNewLine(false)
@@ -678,6 +682,7 @@ void FPixelStreamingManager::CreateServerItem(FString Name, const FBackupServerI
 				.OnCreateServer_Raw(this, &FPixelStreamingManager::CopyServer)
 				.OnDeleteServer_Raw(this, &FPixelStreamingManager::DeleteServer)
 				.OnStateChanged_Raw(this, &FPixelStreamingManager::ServerStateChanged)
+				.OnRenameServer_Raw(this, &FPixelStreamingManager::RenameServer)
 	];
 }
 
@@ -688,23 +693,24 @@ void FPixelStreamingManager::CopyServer(SignallingServerConfig Config, FString N
 	ShowLoadingWidget("Copying...");
 	FBackupServerInfo CopyServerInfo;
 	CopyServerInfo.Config = Config;
-	CopyServerInfo.ServerName = "copy";
+	CopyServerInfo.ServerName = AllocServerName(Name);
 
-	// @todo: calculate which name and ports should we use, avoid conflict with existing files
+	// @todo: calculate which ports should we use, avoid conflict with exists
 	FileHelper::Get().CopyFolderRecursively(
 		FSettingsConfig::Get().GetLaunchConfig().SingnallingServerConfigPath,
-		FSettingsConfig::Get().GetLaunchConfig().ServersRoot / "Backup",TEXT("Copy1"), true, [this,CopyServerInfo
+		FSettingsConfig::Get().GetLaunchConfig().ServersRoot / "Backup", CopyServerInfo.ServerName, true, [this,
+			CopyServerInfo
 		](bool result)
 		{
 			if (result)
 			{
 				UE_LOG(LogPixelStreamingManager, Display, TEXT("Server Copied."));
 				CreateServerItem(CopyServerInfo.ServerName, CopyServerInfo, true);
-				//@todo: add config into json file after folder copied
+				FileHelper::Get().AddServerIntoConfig(CopyServerInfo);
 			}
 			else
 			{
-				FText Title = FText::FromString("CopyTaskResult");
+				FText Title = FText::FromString("CopyFailed");
 				FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("CopyError", "拷贝信令服务器失败."),
 				                     &Title);
 			}
@@ -715,7 +721,15 @@ void FPixelStreamingManager::CopyServer(SignallingServerConfig Config, FString N
 void FPixelStreamingManager::DeleteServer(SignallingServerConfig Config, FString Name, SPSServerSingleton* Target)
 {
 	UE_LOG(LogPixelStreamingManager, Display, TEXT("Handle delete server request."));
-	//@todo: remove folder and remove config in json file
+	FileHelper::Get().DeleteFolder(FSettingsConfig::Get().GetLaunchConfig().ServersRoot / "Backup" / Name, []()
+	{
+		FText Title = FText::FromString("DeleteFailed");
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("DeleteError", "未彻底删除文件夹，请手动删除"),
+		                     &Title);
+	});
+
+	FileHelper::Get().DeleteServerFromConfig(Name);
+	ExistsServerName.Remove(Name);
 
 	if (ServersContainer.IsValid())
 	{
@@ -725,6 +739,42 @@ void FPixelStreamingManager::DeleteServer(SignallingServerConfig Config, FString
 
 void FPixelStreamingManager::ServerStateChanged(SignallingServerConfig Config, EServerState State)
 {
+}
+
+void FPixelStreamingManager::RenameServer(SPSServerSingleton* Target, FString From, FString To)
+{
+	UE_LOG(LogPixelStreamingManager, Display, TEXT("Rename server from %s to %s."), *From, *To);
+
+	// update exists server name container
+	FString AllocatedName = AllocServerName(To);
+	ExistsServerName.Remove(From);
+	ExistsServerName.Add(AllocatedName);
+
+	// update folder name
+	FileHelper::Get().RenameFolder(FSettingsConfig::Get().GetLaunchConfig().ServersRoot / "Backup" / From,
+	                               FSettingsConfig::Get().GetLaunchConfig().ServersRoot / "Backup" / AllocatedName,
+	                               [=](bool bRenameResult)
+	                               {
+		                               if (bRenameResult)
+		                               {
+			                               // update json config server name
+											FileHelper::Get().ModifyServerFromConfig(From,To);
+		                               	
+			                               // update server display text,it could be another name instead of given name
+			                               if (Target && Target->ServerName.IsValid())
+			                               {
+				                               Target->ServerName.Get()->SetText(FText::FromString(AllocatedName));
+			                               }
+		                               }
+		                               else
+		                               {
+			                               UE_LOG(LogPixelStreamingManager, Display, TEXT("Rename Folder Failed..."));
+			                               if (Target && Target->ServerName.IsValid())
+			                               {
+				                               Target->ServerName.Get()->SetText(FText::FromString(From));
+			                               }
+		                               }
+	                               });
 }
 
 void FPixelStreamingManager::ShowLoadingWidget(FString DisplayName)
@@ -746,6 +796,31 @@ void FPixelStreamingManager::HiddenLoadingWidget()
 	{
 		LoadingWidget->SetVisibility(EVisibility::Collapsed);
 	}
+}
+
+FString FPixelStreamingManager::AllocServerName(FString InPreferName, int SuffixIndex)
+{
+	FString Result = InPreferName;
+	if (ExistsServerName.Contains(Result))
+	{
+		FString TargetName;
+		if (SuffixIndex <= 0)
+		{
+			// base -> base_1
+			SuffixIndex = 1;
+			TargetName = Result + "_" + FString::FromInt(SuffixIndex);
+		}
+		else
+		{
+			//base_1 -> base_2
+			FString leftS, rightS;
+			Result.Split("_", &leftS, &rightS, ESearchCase::IgnoreCase, ESearchDir::FromEnd);
+			TargetName = leftS + "_" + FString::FromInt(SuffixIndex);
+		}
+
+		Result = AllocServerName(TargetName, ++SuffixIndex);
+	}
+	return Result;
 }
 
 #undef LOCTEXT_NAMESPACE
