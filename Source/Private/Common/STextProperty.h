@@ -3,7 +3,6 @@
 #include "Widgets/SCompoundWidget.h"
 #include "Containers/UnrealString.h"
 
-class STextBlock;
 class SEditableText;
 
 DECLARE_DELEGATE_OneParam(FOnTextValueChanged, FString);
@@ -27,10 +26,12 @@ public:
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& InArgs);
+	void SetText(const FString& InText);
 
 private:
 	FString Key;
 	FString Value;
 	float LeftWidth;
 	FOnTextValueChanged OnValueChanged;
+	TSharedPtr<SEditableText> Textblock;
 };

@@ -8,6 +8,7 @@
 
 class SEditableText;
 class SPSServerSingleton;
+class STextProperty;
 
 enum class EServerState : uint8
 {
@@ -15,10 +16,10 @@ enum class EServerState : uint8
 	E_Stop,
 };
 
-DECLARE_DELEGATE_TwoParams(FOnStateChanged, SignallingServerConfig, EServerState);
-DECLARE_DELEGATE_TwoParams(FOnCreateServer, SignallingServerConfig, FString);
-DECLARE_DELEGATE_ThreeParams(FOnDeleteServer, SignallingServerConfig, FString, SPSServerSingleton*);
-DECLARE_DELEGATE_ThreeParams(FOnServerRename, SPSServerSingleton*,FString, FString);
+DECLARE_DELEGATE_TwoParams(FOnStateChanged, FBackupServerInfo, EServerState);
+DECLARE_DELEGATE_TwoParams(FOnCreateServer, FBackupServerInfo, FString);
+DECLARE_DELEGATE_ThreeParams(FOnDeleteServer, FBackupServerInfo, FString, SPSServerSingleton*);
+DECLARE_DELEGATE_ThreeParams(FOnServerRename, SPSServerSingleton*, FBackupServerInfo, FString);
 
 class SPSServerSingleton : public SCompoundWidget
 {
@@ -28,7 +29,7 @@ public:
 			  _Width(300.f),
 			  _Height(300.f),
 			  _Name(FString()),
-			  _Config(SignallingServerConfig()),
+			  _Config(FBackupServerInfo()),
 			  _OnStateChanged(nullptr),
 			  _OnCreateServer(nullptr),
 			  _OnDeleteServer(nullptr),
@@ -41,7 +42,7 @@ public:
 		SLATE_ARGUMENT(float, Width)
 		SLATE_ARGUMENT(float, Height)
 		SLATE_ARGUMENT(class FString, Name)
-		SLATE_ARGUMENT(SignallingServerConfig, Config)
+		SLATE_ARGUMENT(FBackupServerInfo, Config)
 
 		SLATE_EVENT(FOnStateChanged, OnStateChanged)
 		SLATE_EVENT(FOnCreateServer, OnCreateServer)
@@ -56,7 +57,7 @@ public:
 	bool bIsBackupServer;
 	float Width;
 	float Height;
-	SignallingServerConfig Config;
+	FBackupServerInfo Config;
 	int32 HttpPort;
 	int32 SFUPort;
 	int32 StreamerPort;
@@ -71,9 +72,10 @@ public:
 
 public:
 	TSharedPtr<SEditableText> ServerName;
-	TSharedPtr<SEditableText> HttpPortText;
-	TSharedPtr<SEditableText> SFUPortText;
-	TSharedPtr<SEditableText> StreamerPortText;
+	TSharedPtr<STextProperty> HttpPortText;
+	TSharedPtr<STextProperty> SFUPortText;
+	TSharedPtr<STextProperty> StreamerPortText;
+
 protected:
 	bool GetIsEnabled() const;
 private:

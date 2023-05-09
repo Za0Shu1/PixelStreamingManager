@@ -28,7 +28,7 @@ public:
 	FDoScanTask(FString WebServersPath);
 
 	void DoWork();
-	
+
 	FORCEINLINE TStatId GetStatId() const
 	{
 		RETURN_QUICK_DECLARE_CYCLE_STAT(DoScanTask, STATGROUP_ThreadPoolAsyncTasks);
@@ -58,27 +58,27 @@ private:
 
 	FAsyncTask<FDoScanTask>* ScanTask;
 
-	float RightPanelWidth;//右侧区域宽度
+	float RightPanelWidth; //右侧区域宽度
 	float WrapBoxPadding = 10.f;
-	float ItemHorizontalPadding = 5.f;//服务器UI横向间隔
-	float ItemVerticalPadding = 2.f;//服务器UI纵向向间隔
+	float ItemHorizontalPadding = 5.f; //服务器UI横向间隔
+	float ItemVerticalPadding = 2.f; //服务器UI纵向向间隔
 	float ItemWidth = 300.f;
 	float ItemHeight = 200.f;
-	
+
 	const float ScrollBarThickness = 9.f;
 	const float ScrollBarPadding = 2.f;
 
-	TArray<FString> ExistsServerName;
+	TMap<FString, FBackupServerInfo> ExistsServer;
 
 public:
-	/****** MANNULLY TICK BEGIN ******/ 
+	/****** MANNULLY TICK BEGIN ******/
 	bool ScanTaskTick(float UnusedDeltaTime);
-	
+
 	bool Tick(float UnusedDeltaTime);
 
 	void StartScanTicker();
 
-	/****** MANNULLY TICK END ******/ 
+	/****** MANNULLY TICK END ******/
 
 	/****** DRAW WINDOW BEGIN ******/
 
@@ -89,36 +89,42 @@ public:
 
 	void OnWindowResized();
 
-	/****** DRAW WINDOW END ******/ 
+	/****** DRAW WINDOW END ******/
 
 
-	/****** SCAN TASK BEGIN ******/ 
+	/****** SCAN TASK BEGIN ******/
 	bool CanDoScan() const;
 
 	FReply DoScan();
 	FReply LaunchMatchMaker();
 
 	void StartScan();
-	
+
 	void StopBackgroundThread();
 
 	void StopScan();
-	void CreateServerItem(FString Name, const FBackupServerInfo& Config, bool bIsBackupServer = true);
-	void CopyServer(SignallingServerConfig Config, FString Name);
-	void DeleteServer(SignallingServerConfig Config, FString Name,SPSServerSingleton* Target);
-	void ServerStateChanged(SignallingServerConfig Config, EServerState State);
-	void RenameServer(SPSServerSingleton* Target, FString From, FString To);
+	void CreateServerItem(const FBackupServerInfo& Config, bool bIsBackupServer = true);
+	void CopyServer(FBackupServerInfo Config, FString Name);
+	void DeleteServer(FBackupServerInfo Config, FString Name, SPSServerSingleton* Target);
+	void ServerStateChanged(FBackupServerInfo Config, EServerState State);
+	void RenameServer(SPSServerSingleton* Target, FBackupServerInfo Config, FString NewName);
 
 	/****** SCAN TASK END ******/
 
-	/****** COMMON FUNCTIONS BEGIN ******/ 
+	/****** COMMON FUNCTIONS BEGIN ******/
 
 	void ShowLoadingWidget(FString DisplayName);
 
 	void HiddenLoadingWidget();
 
 	FString AllocServerName(FString InPreferName, int SuffixIndex = 0);
+	void AllocPorts(SignallingServerConfig& Config);
+	void IsPortAvailable(FString Port, TUniqueFunction<void(bool)> Callback);
 
-	/****** COMMON FUNCTIONS END ******/ 
+	void AddExistsServerInformation(FBackupServerInfo Info);
 
+	void RemoveExistsServerInformation(FBackupServerInfo Info);
+
+	void UpdateExistsServerInformation(const FBackupServerInfo& From, const FBackupServerInfo& To);
+	/****** COMMON FUNCTIONS END ******/
 };

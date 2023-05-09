@@ -38,6 +38,35 @@ SignallingServerConfig FileHelper::LoadServerConfigFromJsonFile(const FString& J
 	return Result;
 }
 
+bool FileHelper::UpdateServerConfigIntoJsonFile(const FString& JsonFile, const SignallingServerConfig& NewConfig) const
+{
+	if (FPaths::FileExists(JsonFile))
+	{
+		FString FileStr;
+		FFileHelper::LoadFileToString(FileStr, *JsonFile);
+		TSharedPtr<FJsonObject> RootObj = MakeShareable(new FJsonObject());
+		const TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(FileStr);
+		if (FJsonSerializer::Deserialize(JsonReader, RootObj))
+		{
+			RootObj->SetNumberField("HttpPort", NewConfig.HttpPort);
+			RootObj->SetNumberField("StreamerPort", NewConfig.StreamerPort);
+			RootObj->SetNumberField("SFUPort", NewConfig.SFUPort);
+			RootObj->SetStringField("PublicIp", NewConfig.PublicIp);
+
+			//Write the json file
+			FString Json;
+			const TSharedRef<TJsonWriter<>> JsonWriter = TJsonWriterFactory<>::Create(&Json, 0);
+			if (FJsonSerializer::Serialize(RootObj.ToSharedRef(), JsonWriter))
+			{
+				FFileHelper::SaveStringToFile(Json, *JsonFile);
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 TArray<FBackupServerInfo> FileHelper::LoadAllBackupServers(const FString& JsonFile)
 {
 	TArray<FBackupServerInfo> Result;
@@ -59,6 +88,7 @@ TArray<FBackupServerInfo> FileHelper::LoadAllBackupServers(const FString& JsonFi
 					Temp.ServerName = obj->GetStringField("ServerName");
 					Temp.SingnallingServerLocalPath = obj->GetStringField("SingnallingServerLocalPath");
 					Temp.SingnallingServerPublicPath = obj->GetStringField("SingnallingServerPublicPath");
+					Temp.ConfigFilePath = obj->GetStringField("ConfigFilePath");
 
 					Result.Add(Temp);
 				}
@@ -84,16 +114,17 @@ void FileHelper::AddServerIntoConfig(FBackupServerInfo Config)
 
 			if (RootObj->TryGetArrayField(TEXT("Servers"), OutArray))
 			{
-				TSharedPtr<FJsonObject> obj =  MakeShareable(new FJsonObject());
+				TSharedPtr<FJsonObject> obj = MakeShareable(new FJsonObject());
 				obj->SetStringField("ServerName", Config.ServerName);
 				obj->SetStringField("SingnallingServerLocalPath", Config.SingnallingServerLocalPath);
 				obj->SetStringField("SingnallingServerPublicPath", Config.SingnallingServerPublicPath);
+				obj->SetStringField("ConfigFilePath", Config.ConfigFilePath);
 
 				TArray<TSharedPtr<FJsonValue>>* Temp = const_cast<TArray<TSharedPtr<FJsonValue>>*>(OutArray);
 				Temp->Add(MakeShareable(new FJsonValueObject(obj)));
 
-				RootObj->SetArrayField(TEXT("Servers"),*Temp);
-				
+				RootObj->SetArrayField(TEXT("Servers"), *Temp);
+
 				//Write the json file
 				FString Json;
 				TSharedRef<TJsonWriter<>> JsonWriter = TJsonWriterFactory<>::Create(&Json, 0);
@@ -125,11 +156,11 @@ void FileHelper::DeleteServerFromConfig(FString ServerName)
 				for (auto ServerInfo : *OutArray)
 				{
 					TSharedPtr<FJsonObject> obj = ServerInfo->AsObject();
-					if( obj->GetStringField("ServerName") == ServerName)
+					if (obj->GetStringField("ServerName") == ServerName)
 					{
 						TArray<TSharedPtr<FJsonValue>>* Temp = const_cast<TArray<TSharedPtr<FJsonValue>>*>(OutArray);
 						Temp->Remove(ServerInfo);
-						RootObj->SetArrayField(TEXT("Servers"),*Temp);
+						RootObj->SetArrayField(TEXT("Servers"), *Temp);
 						break;
 					}
 				}
@@ -165,13 +196,13 @@ void FileHelper::ModifyServerFromConfig(FString From, FString To)
 				for (auto ServerInfo : *OutArray)
 				{
 					TSharedPtr<FJsonObject> obj = ServerInfo->AsObject();
-					if( obj->GetStringField("ServerName") == From)
+					if (obj->GetStringField("ServerName") == From)
 					{
 						TArray<TSharedPtr<FJsonValue>>* Temp = const_cast<TArray<TSharedPtr<FJsonValue>>*>(OutArray);
 						Temp->Remove(ServerInfo);
-						ServerInfo->AsObject()->SetStringField("ServerName",To);
+						ServerInfo->AsObject()->SetStringField("ServerName", To);
 						Temp->Add(ServerInfo);
-						RootObj->SetArrayField(TEXT("Servers"),*Temp);
+						RootObj->SetArrayField(TEXT("Servers"), *Temp);
 						break;
 					}
 				}
@@ -209,12 +240,11 @@ void FileHelper::CopyFolderRecursively(const FString& SrcDir, const FString& Par
 			CopyCompletionCallback(false);
 		}
 	}
-	bool bSuccess = false;
 
 	// Asynchronously copy the directory tree
 	Async(
 		EAsyncExecution::ThreadPool,
-		[&,DestDir,this]()
+		[=]()
 		{
 			// Get the platform file
 			IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
@@ -223,22 +253,20 @@ void FileHelper::CopyFolderRecursively(const FString& SrcDir, const FString& Par
 			{
 				// Log success
 				UE_LOG(LogPSFileHelper, Display, TEXT("Copy finished."));
-				bSuccess = true;
+				AsyncTask(ENamedThreads::GameThread, [&]()
+				{
+					CopyCompletionCallback(true);
+				});
 			}
 			else
 			{
 				// Log failure
 				UE_LOG(LogPSFileHelper, Display, TEXT("Copy failed."));
-				bSuccess = false;
+				AsyncTask(ENamedThreads::GameThread, [&]()
+				{
+					CopyCompletionCallback(false);
+				});
 			}
-		},
-		[&,this]()
-		{
-			// Call the completion callback with result
-			AsyncTask(ENamedThreads::GameThread, [&,bSuccess,this]()
-			{
-				CopyCompletionCallback(bSuccess);
-			});
 		}
 	);
 }
@@ -293,8 +321,8 @@ void FileHelper::RenameFolder(const FString& From, const FString& To, TUniqueFun
 			// Get the platform file
 			IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
 			// Rename the directory tree
-			bool bResult = PlatformFile.MoveFile(*To,*From);
-			
+			bool bResult = PlatformFile.MoveFile(*To, *From);
+
 			// Call the completion callback with result
 			AsyncTask(ENamedThreads::GameThread, [&,bResult,this]()
 			{

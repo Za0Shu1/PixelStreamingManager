@@ -30,6 +30,7 @@ struct FBackupServerInfo
 	FString ServerName;
 	FString SingnallingServerLocalPath;
 	FString SingnallingServerPublicPath;
+	FString ConfigFilePath;
 
 	SignallingServerConfig Config;
 };
@@ -43,7 +44,11 @@ public:
 		return Instance;
 	}
 
+	// server launch config
 	SignallingServerConfig LoadServerConfigFromJsonFile(const FString& JsonFile);
+	bool UpdateServerConfigIntoJsonFile(const FString& JsonFile, const SignallingServerConfig& NewConfig) const;
+
+	// servers config
 	TArray<FBackupServerInfo> LoadAllBackupServers(const FString& JsonFile);
 	void AddServerIntoConfig(FBackupServerInfo Config);
 	void DeleteServerFromConfig(FString ServerName);

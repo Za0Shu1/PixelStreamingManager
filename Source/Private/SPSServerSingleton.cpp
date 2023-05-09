@@ -3,7 +3,6 @@
 #include "CommonStyle.h"
 #include "SlateOptMacros.h"
 #include "Common/STextProperty.h"
-#include "Styling/AppStyle.h"
 #include "Widgets/SOverlay.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SButton.h"
@@ -11,7 +10,6 @@
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Input/SEditableText.h"
 #include "Widgets/SBoxPanel.h"
-#include "Widgets/Text/STextBlock.h"
 
 
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
@@ -35,9 +33,9 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 	Height = InArgs._Height;
 	State = EServerState::E_Stop;
 	Config = InArgs._Config;
-	HttpPort = InArgs._Config.HttpPort;
-	SFUPort = InArgs._Config.SFUPort;
-	StreamerPort = InArgs._Config.StreamerPort;
+	HttpPort = InArgs._Config.Config.HttpPort;
+	SFUPort = InArgs._Config.Config.SFUPort;
+	StreamerPort = InArgs._Config.Config.StreamerPort;
 
 	OnStateChanged = InArgs._OnStateChanged;
 	OnCreateServer = InArgs._OnCreateServer;
@@ -125,17 +123,18 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 						.ColorAndOpacity(FromHex("#3399ff"))
 						.SelectAllTextWhenFocused(true)
 						.OnTextCommitted_Lambda([this](const FText& Text, ETextCommit::Type Type)
-						{
-							if (Name != Text.ToString())
-							{
-								OnServerRename.ExecuteIfBound(this,Name,Text.ToString());
-								Name = Text.ToString();
-							}
-						})
+						                                     {
+							                                     if (Name != Text.ToString())
+							                                     {
+								                                     OnServerRename.ExecuteIfBound(
+									                                     this, Config, Text.ToString());
+								                                     Name = Text.ToString();
+							                                     }
+						                                     })
 						.ToolTipText_Lambda([this]()
-						{
-							return ServerName->GetText();
-						})
+						                                     {
+							                                     return ServerName->GetText();
+						                                     })
 					]
 				]
 
@@ -213,11 +212,36 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 					  .AutoHeight()
 					  .Padding(FMargin(2.f))
 					[
-						SNew(STextProperty)
+						SAssignNew(HttpPortText, STextProperty)
 						.Key("Http Port")
 						.Value(FString::FromInt(HttpPort))
 						.IsEnabled_Raw(this, &SPSServerSingleton::GetIsEnabled)
 						.LeftWidth(100.f)
+						.OnValueChanged_Lambda([this](FString NewPort)
+						{
+							auto func = [=](bool bAvailable)
+							{
+								if (bAvailable)
+								{
+									Config.Config.HttpPort = FCString::Atoi(*NewPort);
+									if (FileHelper::Get().UpdateServerConfigIntoJsonFile(
+										Config.ConfigFilePath, Config.Config))
+									{
+										HttpPort = Config.Config.HttpPort;
+									}
+									else
+									{
+										Config.Config.HttpPort = HttpPort;
+									}
+								}
+								else
+								{
+									HttpPortText->SetText(FString::FromInt(HttpPort));
+								}
+							};
+
+							
+						})
 					]
 
 					// sfu port
@@ -225,11 +249,23 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 					  .AutoHeight()
 					  .Padding(FMargin(2.f))
 					[
-						SNew(STextProperty)
+						SAssignNew(SFUPortText, STextProperty)
 						.Key("SFU Port")
 						.Value(FString::FromInt(SFUPort))
 						.IsEnabled_Raw(this, &SPSServerSingleton::GetIsEnabled)
 						.LeftWidth(100.f)
+						.OnValueChanged_Lambda([this](FString NewPort)
+						{
+							Config.Config.SFUPort = FCString::Atoi(*NewPort);
+							if (!FileHelper::Get().UpdateServerConfigIntoJsonFile(Config.ConfigFilePath, Config.Config))
+							{
+								SFUPortText->SetText(FString::FromInt(SFUPort));
+							}
+							else
+							{
+								SFUPort = Config.Config.HttpPort;
+							}
+						})
 					]
 
 					// streamer port
@@ -237,14 +273,22 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 					  .AutoHeight()
 					  .Padding(FMargin(2.f))
 					[
-						SNew(STextProperty)
+						SAssignNew(StreamerPortText, STextProperty)
 						.Key("Streamer Port")
 						.Value(FString::FromInt(StreamerPort))
 						.IsEnabled_Raw(this, &SPSServerSingleton::GetIsEnabled)
 						.LeftWidth(100.f)
-						.OnValueChanged_Lambda([](FString NewValue)
+						.OnValueChanged_Lambda([this](FString NewPort)
 						{
-							UE_LOG(LogTemp, Warning, TEXT("Change Value to : %s"), *NewValue);
+							Config.Config.StreamerPort = FCString::Atoi(*NewPort);
+							if (!FileHelper::Get().UpdateServerConfigIntoJsonFile(Config.ConfigFilePath, Config.Config))
+							{
+								StreamerPortText->SetText(FString::FromInt(StreamerPort));
+							}
+							else
+							{
+								StreamerPort = Config.Config.StreamerPort;
+							}
 						})
 					]
 

@@ -51,7 +51,7 @@ void STextProperty::Construct(const FArguments& InArgs)
 			.HAlign(HAlign_Fill)
 			.Padding(FMargin(10.f, 0, 0, 0))
 			[
-				SNew(SEditableText)
+				SAssignNew(Textblock,SEditableText)
 				.Text(FText::FromString(Value))
 				.Font(FAppStyle::GetFontStyle("PropertyWindow.NormalFont"))
 				.SelectAllTextWhenFocused(true)
@@ -71,4 +71,12 @@ void STextProperty::Construct(const FArguments& InArgs)
 			]
 		]
 	];
+}
+
+void STextProperty::SetText(const FString& InText)
+{
+	if(Textblock.IsValid())
+	{
+		Textblock->SetText(FText::FromString(InText));
+	}
 }
