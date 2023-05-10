@@ -1,6 +1,4 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
-
-
 #include "PixelStreamingManager.h"
 
 #include "CommonStyle.h"
@@ -13,7 +11,11 @@
 #include "HAL/FileManager.h"
 #include "Misc/App.h"
 #include "Misc/MessageDialog.h"
+#include <Windows.h>
+#include <Shellapi.h>
+#include <string>
 
+#include "Async/Async.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Images/SThrobber.h"
 #include "Widgets/Layout/SBox.h"
@@ -115,9 +117,16 @@ void FDoScanTask::DoWork()
 
 FPixelStreamingManager::FPixelStreamingManager(FSlateApplication& InSlate): Slate(InSlate)
 {
+	// 添加程序退出事件的监听器
+	FCoreDelegates::OnExit.AddRaw(this, &FPixelStreamingManager::ShutDown);
 }
 
 FPixelStreamingManager::~FPixelStreamingManager()
+{
+	ShutDown();
+}
+
+void FPixelStreamingManager::ShutDown()
 {
 	FTSTicker::GetCoreTicker().RemoveTicker(GlobalTickHandle);
 }
@@ -591,9 +600,134 @@ FReply FPixelStreamingManager::DoScan()
 
 FReply FPixelStreamingManager::LaunchMatchMaker()
 {
-	UE_LOG(LogPixelStreamingManager, Display, TEXT("Going to launch matchmaker service..."));
+	const FString MatchmakerPath = FSettingsConfig::Get().GetLaunchConfig().MatchMakerBatchPath;
+
+	AsyncTask(ENamedThreads::AnyThread, [MatchmakerPath,this]()
+	{
+		RunBatchScript(MatchmakerPath);
+	});
+
 	return FReply::Handled();
 }
+
+void FPixelStreamingManager::RunBatScriptWithOutput(const FString& BatPath)
+{
+	// 将FString转换为std::wstring
+	std::wstring ScriptPathWStr(*BatPath);
+
+	// 创建匿名管道
+	HANDLE hReadPipe, hWritePipe;
+	SECURITY_ATTRIBUTES saAttr;
+	saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+	saAttr.bInheritHandle = true;
+	saAttr.lpSecurityDescriptor = NULL;
+
+
+	if (!CreatePipe(&hReadPipe, &hWritePipe, &saAttr, 0))
+	{
+		UE_LOG(LogPixelStreamingManager, Error, TEXT("Failed to create pipe!"));
+		return;
+	}
+
+	// 设置启动信息
+	STARTUPINFO si;
+	ZeroMemory(&si, sizeof(STARTUPINFO));
+	si.cb = sizeof(STARTUPINFO);
+	si.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
+	si.wShowWindow = SW_HIDE;
+	si.hStdInput = NULL;
+	si.hStdOutput = hWritePipe;
+	si.hStdError = hWritePipe;
+
+	// 创建进程并启动bat脚本
+	PROCESS_INFORMATION pi;
+	ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
+
+	FString DirectoryPath = FPaths::GetPath(BatPath);
+
+	// 将FString转换为TCHAR*
+	TCHAR* BatchPathTChar = new TCHAR[BatPath.Len() + 1];
+	_tcscpy_s(BatchPathTChar, BatPath.Len() + 1, *BatPath);
+
+	// 将FString转换为TCHAR*
+	TCHAR* DirectoryPathTChar = new TCHAR[DirectoryPath.Len() + 1];
+	_tcscpy_s(DirectoryPathTChar, DirectoryPath.Len() + 1, *DirectoryPath);
+
+	if (!CreateProcess(NULL, const_cast<LPWSTR>(ScriptPathWStr.c_str()), NULL, NULL, true, 0, NULL, DirectoryPathTChar,
+	                   &si, &pi))
+	{
+		UE_LOG(LogPixelStreamingManager, Error, TEXT("Failed to start the bat script!"));
+		CloseHandle(hReadPipe);
+		CloseHandle(hWritePipe);
+		return;
+	}
+
+	// 关闭无用的写管道句柄
+	CloseHandle(hWritePipe);
+
+	// 读取管道输出并打印到控制台
+	CHAR buffer[4096];
+	DWORD bytesRead;
+	std::string output;
+
+	while (ReadFile(hReadPipe, buffer, sizeof(buffer) - 1, &bytesRead, NULL) != 0 && bytesRead != 0)
+	{
+		buffer[bytesRead] = '\0';
+		output += buffer;
+
+		// 每次读取到换行符或回车符时，打印输出
+		size_t pos = output.find_first_of("\r\n");
+		while (pos != std::string::npos)
+		{
+			if (pos > 0) // 跳过空行
+			{
+				FString OutputLine(output.substr(0, pos).c_str());
+				UE_LOG(LogPixelStreamingManager, Warning, TEXT("%s"), *OutputLine);
+			}
+
+			output.erase(0, pos + 1);
+			pos = output.find_first_of("\r\n");
+		}
+	}
+
+	// 关闭管道和进程句柄
+	CloseHandle(hReadPipe);
+	CloseHandle(pi.hProcess);
+	CloseHandle(pi.hThread);
+
+	// 释放内存
+	delete[] BatchPathTChar;
+	delete[] DirectoryPathTChar;
+}
+
+
+void FPixelStreamingManager::RunBatchScript(const FString& BatchScriptPath)
+{
+	STARTUPINFOW si;
+	PROCESS_INFORMATION pi;
+	ZeroMemory(&si, sizeof(si));
+	si.cb = sizeof(si);
+	ZeroMemory(&pi, sizeof(pi));
+
+	// Convert FString to LPCWSTR
+	const TCHAR* BatPathPtr = *BatchScriptPath;
+	LPCWSTR BatPathLPCWSTR = (LPCWSTR)BatPathPtr;
+
+	// Create the process
+	if (!::CreateProcessW(NULL, (LPWSTR)BatPathLPCWSTR, NULL, NULL, false, 0, NULL, NULL, &si, &pi))
+	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to start bat script!"));
+		return;
+	}
+
+	// Wait for the process to finish
+	WaitForSingleObject(pi.hProcess, INFINITE);
+
+	// Clean up
+	CloseHandle(pi.hProcess);
+	CloseHandle(pi.hThread);
+}
+
 
 void FPixelStreamingManager::StartScan()
 {
@@ -684,6 +818,7 @@ void FPixelStreamingManager::CreateServerItem(const FBackupServerInfo& Config, b
 				.OnDeleteServer_Raw(this, &FPixelStreamingManager::DeleteServer)
 				.OnStateChanged_Raw(this, &FPixelStreamingManager::ServerStateChanged)
 				.OnRenameServer_Raw(this, &FPixelStreamingManager::RenameServer)
+				.OnChangePort_Raw(this, &FPixelStreamingManager::ChangePort)
 	];
 }
 
@@ -699,39 +834,44 @@ void FPixelStreamingManager::CopyServer(FBackupServerInfo Config, FString Name)
 	Config.ServerName = AllocServerName(Name);
 	Config.ConfigFilePath = BackupFolder / Config.ServerName / "config.json";
 	Config.SingnallingServerLocalPath = BackupFolder / Config.ServerName / "platform_scripts/cmd/run_local.bat";
-	Config.SingnallingServerPublicPath = BackupFolder / Config.ServerName / "platform_scripts/cmd/Start_WithTURN_SignallingServer.ps1";
-	
+	Config.SingnallingServerPublicPath = BackupFolder / Config.ServerName /
+		"platform_scripts/cmd/Start_WithTURN_SignallingServer.ps1";
+
 	AllocPorts(Config.Config);
 
-	FileHelper::Get().CopyFolderRecursively(CopyFrom, BackupFolder, Config.ServerName, true, [this,BackupFolder,Config](bool result)
-	{
-		if (result)
-		{
-			UE_LOG(LogPixelStreamingManager, Display, TEXT("Server Copied."));
-			
-			if (FileHelper::Get().UpdateServerConfigIntoJsonFile(Config.ConfigFilePath,Config.Config))
-			{
-				CreateServerItem(Config, true);
-				FileHelper::Get().AddServerIntoConfig(Config);
-			}
-			else
-			{
-				FText Title = FText::FromString("UpdateFailed");
-				FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("UpdateError", "初始化服务器配置失败."),
-				                     &Title);
-				const FString ServerFolder = BackupFolder / Config.ServerName;
-				FileHelper::Get().DeleteFolder(ServerFolder,nullptr);
-			}
-		}
-		else
-		{
-			FText Title = FText::FromString("CopyFailed");
-			
-			FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("CopyError", "拷贝信令服务器失败."),
-			                     &Title);
-		}
-		HiddenLoadingWidget();
-	});
+	FileHelper::Get().CopyFolderRecursively(CopyFrom, BackupFolder, Config.ServerName, true,
+	                                        [this,BackupFolder,Config](bool result)
+	                                        {
+		                                        if (result)
+		                                        {
+			                                        UE_LOG(LogPixelStreamingManager, Display, TEXT("Server Copied."));
+
+			                                        if (FileHelper::Get().UpdateServerConfigIntoJsonFile(
+				                                        Config.ConfigFilePath, Config.Config))
+			                                        {
+				                                        CreateServerItem(Config, true);
+				                                        FileHelper::Get().AddServerIntoConfig(Config);
+			                                        }
+			                                        else
+			                                        {
+				                                        FText Title = FText::FromString("UpdateFailed");
+				                                        FMessageDialog::Open(
+					                                        EAppMsgType::Ok, LOCTEXT("UpdateError", "初始化服务器配置失败."),
+					                                        &Title);
+				                                        const FString ServerFolder = BackupFolder / Config.ServerName;
+				                                        FileHelper::Get().DeleteFolder(ServerFolder, nullptr);
+			                                        }
+		                                        }
+		                                        else
+		                                        {
+			                                        FText Title = FText::FromString("CopyFailed");
+
+			                                        FMessageDialog::Open(
+				                                        EAppMsgType::Ok, LOCTEXT("CopyError", "拷贝信令服务器失败."),
+				                                        &Title);
+		                                        }
+		                                        HiddenLoadingWidget();
+	                                        });
 }
 
 void FPixelStreamingManager::DeleteServer(FBackupServerInfo Config, FString Name, SPSServerSingleton* Target)
@@ -793,6 +933,41 @@ void FPixelStreamingManager::RenameServer(SPSServerSingleton* Target, FBackupSer
 			                               }
 		                               }
 	                               });
+}
+
+void FPixelStreamingManager::ChangePort(FBackupServerInfo& Config, EPortType PortType, FString& NewPort,
+                                        uint16& OldPort)
+{
+	if (IsPortAvailable(NewPort))
+	{
+		int TempPort = FCString::Atoi(*NewPort);
+
+		// @todo: change port in json files
+		switch (PortType)
+		{
+		case EPortType::E_Http:
+			Config.Config.HttpPort = TempPort;
+			break;
+		case EPortType::E_SFU:
+			Config.Config.SFUPort = TempPort;
+			break;
+		case EPortType::E_Streamer:
+			Config.Config.StreamerPort = TempPort;
+			break;
+		}
+
+		if (!FileHelper::Get().UpdateServerConfigIntoJsonFile(Config.ConfigFilePath, Config.Config))
+		{
+			NewPort = FString::FromInt(OldPort);
+			return;
+		}
+		OldPort = TempPort;
+		ExistsServer.Add(Config.ServerName, Config);
+	}
+	else
+	{
+		NewPort = FString::FromInt(OldPort);
+	}
 }
 
 void FPixelStreamingManager::ShowLoadingWidget(FString DisplayName)
@@ -889,13 +1064,20 @@ void FPixelStreamingManager::AllocPorts(SignallingServerConfig& Config)
 	Config.PublicIp = FSettingsConfig::Get().GetPublicIP();
 }
 
-void FPixelStreamingManager::IsPortAvailable(FString Port, TUniqueFunction<void(bool)> Callback)
+bool FPixelStreamingManager::IsPortAvailable(FString& Port)
 {
-	if(!Port.IsNumeric())
+	if (!Port.IsNumeric())
 	{
-		Callback(false);
+		UE_LOG(LogPixelStreamingManager, Error, TEXT("Invalid Port!"));
+		return false;
 	}
-	
+
+	int NewPort = FCString::Atoi(*Port);
+	if (NewPort > 65535 || NewPort < 0)
+	{
+		NewPort = 65535;
+	}
+
 	TArray<int> AllExistsPorts;
 	for (auto a : ExistsServer)
 	{
@@ -903,8 +1085,13 @@ void FPixelStreamingManager::IsPortAvailable(FString Port, TUniqueFunction<void(
 		AllExistsPorts.Add(a.Value.Config.SFUPort);
 		AllExistsPorts.Add(a.Value.Config.StreamerPort);
 	}
+	if (!AllExistsPorts.Contains(NewPort))
+	{
+		Port = FString::FromInt(NewPort);
+		return true;
+	}
 
-	Callback(!AllExistsPorts.Contains(FCString::Atoi(*Port)));
+	return false;
 }
 
 void FPixelStreamingManager::AddExistsServerInformation(FBackupServerInfo Info)

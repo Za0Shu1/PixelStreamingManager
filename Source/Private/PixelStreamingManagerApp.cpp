@@ -49,7 +49,6 @@ bool PixelStreamingMain(const TCHAR* CmdLine)
 			// run the inner application loop
 			FPixelStreamingManager App(Slate.Get());
 			App.Run();
-
 			// unload style
 			FPSManagerStyle::Shutdown();
 		}
@@ -57,7 +56,6 @@ bool PixelStreamingMain(const TCHAR* CmdLine)
 		// close the slate application
 		FSlateApplication::Shutdown();
 	}
-	
 	FEngineLoop::AppPreExit();
 	FModuleManager::Get().UnloadModulesAtShutdown();
 	FEngineLoop::AppExit();

@@ -5,7 +5,7 @@
 
 class SEditableText;
 
-DECLARE_DELEGATE_OneParam(FOnTextValueChanged, FString);
+DECLARE_DELEGATE_OneParam(FOnTextValueChanged, FString&);
 
 class STextProperty : public SCompoundWidget
 {

@@ -43,6 +43,8 @@ public:
 	FPixelStreamingManager(FSlateApplication& InSlate);
 	~FPixelStreamingManager();
 
+	void ShutDown();
+
 private:
 	FSlateApplication& Slate;
 	TSharedPtr<STextBlock> PathText;
@@ -69,7 +71,6 @@ private:
 	const float ScrollBarPadding = 2.f;
 
 	TMap<FString, FBackupServerInfo> ExistsServer;
-
 public:
 	/****** MANNULLY TICK BEGIN ******/
 	bool ScanTaskTick(float UnusedDeltaTime);
@@ -97,6 +98,9 @@ public:
 
 	FReply DoScan();
 	FReply LaunchMatchMaker();
+	
+	void RunBatScriptWithOutput(const FString& BatPath);
+	void RunBatchScript(const FString& BatchScriptPath);
 
 	void StartScan();
 
@@ -108,6 +112,7 @@ public:
 	void DeleteServer(FBackupServerInfo Config, FString Name, SPSServerSingleton* Target);
 	void ServerStateChanged(FBackupServerInfo Config, EServerState State);
 	void RenameServer(SPSServerSingleton* Target, FBackupServerInfo Config, FString NewName);
+	void ChangePort(FBackupServerInfo& Config, EPortType PortType, FString& NewPort, uint16& OldPort);
 
 	/****** SCAN TASK END ******/
 
@@ -119,7 +124,7 @@ public:
 
 	FString AllocServerName(FString InPreferName, int SuffixIndex = 0);
 	void AllocPorts(SignallingServerConfig& Config);
-	void IsPortAvailable(FString Port, TUniqueFunction<void(bool)> Callback);
+	bool IsPortAvailable(FString& Port);
 
 	void AddExistsServerInformation(FBackupServerInfo Info);
 

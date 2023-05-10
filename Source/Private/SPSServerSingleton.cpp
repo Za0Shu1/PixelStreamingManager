@@ -41,6 +41,7 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 	OnCreateServer = InArgs._OnCreateServer;
 	OnDeleteServer = InArgs._OnDeleteServer;
 	OnServerRename = InArgs._OnRenameServer;
+	OnChangePort = InArgs._OnChangePort;
 
 	ChildSlot
 	[
@@ -217,30 +218,9 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 						.Value(FString::FromInt(HttpPort))
 						.IsEnabled_Raw(this, &SPSServerSingleton::GetIsEnabled)
 						.LeftWidth(100.f)
-						.OnValueChanged_Lambda([this](FString NewPort)
+						.OnValueChanged_Lambda([this](FString& NewPort)
 						{
-							auto func = [=](bool bAvailable)
-							{
-								if (bAvailable)
-								{
-									Config.Config.HttpPort = FCString::Atoi(*NewPort);
-									if (FileHelper::Get().UpdateServerConfigIntoJsonFile(
-										Config.ConfigFilePath, Config.Config))
-									{
-										HttpPort = Config.Config.HttpPort;
-									}
-									else
-									{
-										Config.Config.HttpPort = HttpPort;
-									}
-								}
-								else
-								{
-									HttpPortText->SetText(FString::FromInt(HttpPort));
-								}
-							};
-
-							
+							OnChangePort.ExecuteIfBound(Config,EPortType::E_Http,NewPort,HttpPort);
 						})
 					]
 
@@ -254,17 +234,9 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 						.Value(FString::FromInt(SFUPort))
 						.IsEnabled_Raw(this, &SPSServerSingleton::GetIsEnabled)
 						.LeftWidth(100.f)
-						.OnValueChanged_Lambda([this](FString NewPort)
+						.OnValueChanged_Lambda([this](FString& NewPort)
 						{
-							Config.Config.SFUPort = FCString::Atoi(*NewPort);
-							if (!FileHelper::Get().UpdateServerConfigIntoJsonFile(Config.ConfigFilePath, Config.Config))
-							{
-								SFUPortText->SetText(FString::FromInt(SFUPort));
-							}
-							else
-							{
-								SFUPort = Config.Config.HttpPort;
-							}
+							OnChangePort.ExecuteIfBound(Config,EPortType::E_SFU,NewPort,SFUPort);
 						})
 					]
 
@@ -278,17 +250,9 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 						.Value(FString::FromInt(StreamerPort))
 						.IsEnabled_Raw(this, &SPSServerSingleton::GetIsEnabled)
 						.LeftWidth(100.f)
-						.OnValueChanged_Lambda([this](FString NewPort)
+						.OnValueChanged_Lambda([this](FString& NewPort)
 						{
-							Config.Config.StreamerPort = FCString::Atoi(*NewPort);
-							if (!FileHelper::Get().UpdateServerConfigIntoJsonFile(Config.ConfigFilePath, Config.Config))
-							{
-								StreamerPortText->SetText(FString::FromInt(StreamerPort));
-							}
-							else
-							{
-								StreamerPort = Config.Config.StreamerPort;
-							}
+							OnChangePort.ExecuteIfBound(Config,EPortType::E_Streamer,NewPort,StreamerPort);
 						})
 					]
 

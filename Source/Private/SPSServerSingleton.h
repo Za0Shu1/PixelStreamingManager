@@ -16,10 +16,18 @@ enum class EServerState : uint8
 	E_Stop,
 };
 
+enum class EPortType : uint8
+{
+	E_Http,
+	E_SFU,
+	E_Streamer
+};
+
 DECLARE_DELEGATE_TwoParams(FOnStateChanged, FBackupServerInfo, EServerState);
 DECLARE_DELEGATE_TwoParams(FOnCreateServer, FBackupServerInfo, FString);
 DECLARE_DELEGATE_ThreeParams(FOnDeleteServer, FBackupServerInfo, FString, SPSServerSingleton*);
 DECLARE_DELEGATE_ThreeParams(FOnServerRename, SPSServerSingleton*, FBackupServerInfo, FString);
+DECLARE_DELEGATE_FourParams(FOnChangePort, FBackupServerInfo&, EPortType, FString&, uint16&);
 
 class SPSServerSingleton : public SCompoundWidget
 {
@@ -33,7 +41,8 @@ public:
 			  _OnStateChanged(nullptr),
 			  _OnCreateServer(nullptr),
 			  _OnDeleteServer(nullptr),
-			  _OnRenameServer(nullptr)
+			  _OnRenameServer(nullptr),
+			  _OnChangePort(nullptr)
 
 		{
 		}
@@ -48,6 +57,7 @@ public:
 		SLATE_EVENT(FOnCreateServer, OnCreateServer)
 		SLATE_EVENT(FOnDeleteServer, OnDeleteServer)
 		SLATE_EVENT(FOnServerRename, OnRenameServer)
+		SLATE_EVENT(FOnChangePort, OnChangePort)
 
 	SLATE_END_ARGS()
 
@@ -58,15 +68,16 @@ public:
 	float Width;
 	float Height;
 	FBackupServerInfo Config;
-	int32 HttpPort;
-	int32 SFUPort;
-	int32 StreamerPort;
+	uint16 HttpPort;
+	uint16 SFUPort;
+	uint16 StreamerPort;
 	EServerState State;
 	FString Name;
 	FOnStateChanged OnStateChanged;
 	FOnCreateServer OnCreateServer;
 	FOnDeleteServer OnDeleteServer;
 	FOnServerRename OnServerRename;
+	FOnChangePort OnChangePort;
 
 	void Construct(const FArguments& InArgs);
 

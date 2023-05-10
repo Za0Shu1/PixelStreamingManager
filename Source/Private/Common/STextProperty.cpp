@@ -52,7 +52,10 @@ void STextProperty::Construct(const FArguments& InArgs)
 			.Padding(FMargin(10.f, 0, 0, 0))
 			[
 				SAssignNew(Textblock,SEditableText)
-				.Text(FText::FromString(Value))
+				.Text_Lambda([this]()
+				{
+					return FText::FromString(Value);
+				})
 				.Font(FAppStyle::GetFontStyle("PropertyWindow.NormalFont"))
 				.SelectAllTextWhenFocused(true)
 
