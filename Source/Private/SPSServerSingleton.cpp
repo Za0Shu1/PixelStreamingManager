@@ -2,6 +2,7 @@
 
 #include "CommonStyle.h"
 #include "SlateOptMacros.h"
+#include "Async/Async.h"
 #include "Common/STextProperty.h"
 #include "Widgets/SOverlay.h"
 #include "Widgets/Images/SImage.h"
@@ -13,6 +14,8 @@
 
 
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
+
+DEFINE_LOG_CATEGORY(LogPSServer);
 
 #define LOCTEXT_NAMESPACE "SPSServerSingleton"
 #define FromHex(Hex) FLinearColor::FromSRGBColor(FColor::FromHex(Hex))
@@ -89,13 +92,7 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 					             {
 						             return GetIsEnabled() || State == EServerState::E_Running;
 					             })
-					.OnClicked_Lambda([this]()
-					             {
-						             State = State == EServerState::E_Running
-							                     ? EServerState::E_Stop
-							                     : EServerState::E_Running;
-						             return FReply::Handled();
-					             })
+					.OnClicked_Raw(this, &SPSServerSingleton::OnButtonClick)
 					[
 						SNew(SImage)
 						// icon
@@ -138,7 +135,7 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 						                                     })
 					]
 				]
-
+#pragma region operations
 				// Operations
 				+ SOverlay::Slot()
 				  .HAlign(HAlign_Right)
@@ -199,6 +196,7 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 					]
 
 				]
+#pragma endregion
 				// Ports
 #pragma region Ports
 				+ SOverlay::Slot()
@@ -220,7 +218,7 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 						.LeftWidth(100.f)
 						.OnValueChanged_Lambda([this](FString& NewPort)
 						{
-							OnChangePort.ExecuteIfBound(Config,EPortType::E_Http,NewPort,HttpPort);
+							OnChangePort.ExecuteIfBound(Config, EPortType::E_Http, NewPort, HttpPort);
 						})
 					]
 
@@ -236,7 +234,7 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 						.LeftWidth(100.f)
 						.OnValueChanged_Lambda([this](FString& NewPort)
 						{
-							OnChangePort.ExecuteIfBound(Config,EPortType::E_SFU,NewPort,SFUPort);
+							OnChangePort.ExecuteIfBound(Config, EPortType::E_SFU, NewPort, SFUPort);
 						})
 					]
 
@@ -252,7 +250,7 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 						.LeftWidth(100.f)
 						.OnValueChanged_Lambda([this](FString& NewPort)
 						{
-							OnChangePort.ExecuteIfBound(Config,EPortType::E_Streamer,NewPort,StreamerPort);
+							OnChangePort.ExecuteIfBound(Config, EPortType::E_Streamer, NewPort, StreamerPort);
 						})
 					]
 
@@ -267,6 +265,198 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 bool SPSServerSingleton::GetIsEnabled() const
 {
 	return bIsBackupServer && State != EServerState::E_Running;
+}
+
+void SPSServerSingleton::CloseServerHandle()
+{
+	if (HND_SingallingServer != NULL && HND_SingallingServer != INVALID_HANDLE_VALUE)
+	{
+		// 手动关闭进程
+		TerminateProcess(HND_SingallingServer, 0);
+		HND_SingallingServer = INVALID_HANDLE_VALUE;
+	}
+
+	if (HND_UnrealClient != NULL && HND_UnrealClient != INVALID_HANDLE_VALUE)
+	{
+		// 手动关闭进程
+		TerminateProcess(HND_UnrealClient, 0);
+		HND_UnrealClient = INVALID_HANDLE_VALUE;
+	}
+
+	State = EServerState::E_Stop;
+}
+
+FReply SPSServerSingleton::OnButtonClick()
+{
+	if (State == EServerState::E_Stop)
+	{
+		// RUN SIGNALLING SERVER
+		const FString RunSingallingServerPath = FSettingsConfig::Get().GetIsPublic()
+			                                        ? Config.SingnallingServerPublicPath
+			                                        : Config.SingnallingServerLocalPath;
+
+		AsyncTask(ENamedThreads::AnyThread, [&,RunSingallingServerPath,this]()
+		{
+			RunServerScript(RunSingallingServerPath, [&,this](int RetCode)
+			{
+				switch (RetCode)
+				{
+				case -1:
+					UE_LOG(LogPSServer, Error, TEXT("Can not launch signalling server."));
+					break;
+				case 0:
+					UE_LOG(LogPSServer, Display, TEXT("Singalling server shutdown."));
+					CloseServerHandle();
+					break;
+				case 1:
+					UE_LOG(LogPSServer, Display, TEXT("Singalling server is running..."));
+					if(GetIsValidHandle(HND_UnrealClient))
+					{
+						State = EServerState::E_Running;
+					}
+					break;
+				}
+			});
+		});
+
+		// RUN UNREAL CLIENT
+		const FString ExtraCommands = FSettingsConfig::Get().GetExtraCommands() + " -PixelStreamingIP=" + Config.Config.
+			PublicIp + " _PixelStreamingPort=" + FString::FromInt(Config.Config.StreamerPort);
+		UE_LOG(LogPSServer, Error, TEXT("commands: ===%s"), *ExtraCommands);
+
+		AsyncTask(ENamedThreads::AnyThread, [&,ExtraCommands,this]()
+		{
+			RunUnrealClient(FSettingsConfig::Get().GetClientPath(), ExtraCommands, [&,this](int RetCode)
+			{
+				switch (RetCode)
+				{
+				case -1:
+					UE_LOG(LogPSServer, Error, TEXT("Can not launch unreal client."));
+					break;
+
+				case 0:
+					UE_LOG(LogPSServer, Display, TEXT("Unreal client shutdown."));
+					CloseServerHandle();
+					break;
+					
+				case 1:
+					UE_LOG(LogPSServer, Display, TEXT("Unreal client is running..."));
+					if(GetIsValidHandle(HND_SingallingServer))
+					{
+						State = EServerState::E_Running;
+					}
+					break;
+				}
+			});
+		});
+	}
+	else
+	{
+		if (State == EServerState::E_Running)
+		{
+			CloseServerHandle();
+		}
+	}
+	OnStateChanged.ExecuteIfBound(Config, State);
+	return FReply::Handled();
+}
+
+// only support .bat or .ps1 file
+// callback code -1:launch failed; 0:process closed; 1:process running
+void SPSServerSingleton::RunServerScript(const FString& ScriptPath,
+                                         TUniqueFunction<void(int)> Callback)
+{
+	// Check if the script file has a valid extension
+	if (!(ScriptPath.EndsWith(".bat") || ScriptPath.EndsWith(".ps1")))
+	{
+		UE_LOG(LogPSServer, Warning, TEXT("Only support .bat or .ps1 script file."));
+		Callback(-1);
+		return;
+	}
+
+	STARTUPINFOW si;
+	PROCESS_INFORMATION pi;
+	ZeroMemory(&si, sizeof(si));
+	si.cb = sizeof(si);
+	ZeroMemory(&pi, sizeof(pi));
+
+	FString ScriptArgument;
+
+	// Determine the command interpreter and script argument based on the file extension
+	if (ScriptPath.EndsWith(".bat"))
+	{
+		ScriptArgument = FString::Printf(TEXT("cmd.exe /c \"%s\""), *ScriptPath);
+	}
+	else if (ScriptPath.EndsWith(".ps1"))
+	{
+		ScriptArgument = FString::Printf(TEXT("powershell.exe -ExecutionPolicy Bypass -File \"%s\""), *ScriptPath);
+	}
+
+	// Convert the strings to LPCWSTR
+	LPCWSTR ScriptArgumentLPCWSTR = (LPCWSTR)*ScriptArgument;
+
+	UE_LOG(LogPSServer, Warning, TEXT("====  %s"), *ScriptArgument);
+
+	// Create the process
+	if (!::CreateProcessW(NULL, (LPWSTR)ScriptArgumentLPCWSTR, NULL, NULL, false, 0, NULL, NULL,
+	                      &si, &pi))
+	{
+		UE_LOG(LogPSServer, Error, TEXT("Failed to start script!"));
+		Callback(-1);
+		return;
+	}
+
+	HND_SingallingServer = pi.hProcess;
+	Callback(1);
+
+	// Wait for the process to finish
+	WaitForSingleObject(pi.hProcess, INFINITE);
+
+	// Clean up
+	CloseHandle(pi.hProcess);
+	CloseHandle(pi.hThread);
+	Callback(0);
+}
+
+// callback code -1:launch failed; 0:process closed; 1:process running
+void SPSServerSingleton::RunUnrealClient(const FString& ExePath, const FString& ExtraCommands,
+                                         TUniqueFunction<void(int)> Callback)
+{
+	STARTUPINFOW si;
+	PROCESS_INFORMATION pi;
+	ZeroMemory(&si, sizeof(si));
+	si.cb = sizeof(si);
+	ZeroMemory(&pi, sizeof(pi));
+
+	UE_LOG(LogPSServer, Error, TEXT("commands: ===%s"), *ExtraCommands);
+
+	FString ScriptArgument = FString::Printf(TEXT("%s %s"), *ExePath, *ExtraCommands);
+
+	// Convert the strings to LPCWSTR
+	LPCWSTR ScriptArgumentLPCWSTR = (LPCWSTR)*ScriptArgument;
+
+	UE_LOG(LogPSServer, Error, TEXT("====  %s"), *ScriptArgument);
+
+	// Create the process
+	if (!::CreateProcessW(NULL, (LPWSTR)ScriptArgumentLPCWSTR, NULL, NULL, false, 0, NULL, NULL,
+	                      &si, &pi))
+	{
+		UE_LOG(LogPSServer, Error, TEXT("Failed to start script!"));
+		Callback(-1);
+		return;
+	}
+
+	HND_UnrealClient = pi.hProcess;
+
+	Callback(1);
+
+	// Wait for the process to finish
+	WaitForSingleObject(pi.hProcess, INFINITE);
+
+	// Clean up
+	CloseHandle(pi.hProcess);
+	CloseHandle(pi.hThread);
+	Callback(0);
 }
 
 #undef LOCTEXT_NAMESPACE

@@ -52,6 +52,7 @@ bool FileHelper::UpdateServerConfigIntoJsonFile(const FString& JsonFile, const S
 			RootObj->SetNumberField("StreamerPort", NewConfig.StreamerPort);
 			RootObj->SetNumberField("SFUPort", NewConfig.SFUPort);
 			RootObj->SetStringField("PublicIp", NewConfig.PublicIp);
+			RootObj->SetBoolField("UseMatchmaker", NewConfig.UseMatchmaker);
 
 			//Write the json file
 			FString Json;

@@ -430,11 +430,17 @@ void FPixelStreamingManager::Run()
 								[
 									SNew(SButton)
 									.Text(FText(LOCTEXT("LaunchMatchmaker", "启动Matchmaker")))
+									.Text_Lambda([this]()
+									             {
+										             FText _Run(LOCTEXT("LaunchMatchmaker", "启动Matchmaker"));
+										             FText _Stop(LOCTEXT("ShutdownMatchmaker", "停止Matchmaker"));
+										             return bMatchMakerRunningInProgress ? _Stop : _Run;
+									             })
 									.IsEnabled_Lambda([this]()
 									             {
 										             return CanDoScan() && FSettingsConfig::Get().GetUseMatchmaker();
 									             })
-									.OnClicked_Raw(this, &FPixelStreamingManager::LaunchMatchMaker)
+									.OnClicked_Raw(this, &FPixelStreamingManager::ToggleMatchMaker)
 									.ToolTipText_Raw(this, &FPixelStreamingManager::GenerateLaunchMatchmakerToolTip)
 								]
 
@@ -564,9 +570,15 @@ FText FPixelStreamingManager::GenerateScanToolTip() const
 
 FText FPixelStreamingManager::GenerateLaunchMatchmakerToolTip() const
 {
-	const FString Result = CanDoScan() && FSettingsConfig::Get().GetUseMatchmaker()
-		                       ? "Launch Matchmaker service"
-		                       : "Matchmaker not enable.";
+	FString Result;
+	if (CanDoScan() && FSettingsConfig::Get().GetUseMatchmaker())
+	{
+		Result = bMatchMakerRunningInProgress ? "Shutdown matchmaker service" : "Launch matchmaker service";
+	}
+	else
+	{
+		Result = "Matchmaker not enable.";
+	}
 	return FText::FromString(Result);
 }
 
@@ -598,14 +610,31 @@ FReply FPixelStreamingManager::DoScan()
 	return FReply::Handled();
 }
 
-FReply FPixelStreamingManager::LaunchMatchMaker()
+FReply FPixelStreamingManager::ToggleMatchMaker()
 {
-	const FString MatchmakerPath = FSettingsConfig::Get().GetLaunchConfig().MatchMakerBatchPath;
-
-	AsyncTask(ENamedThreads::AnyThread, [MatchmakerPath,this]()
+	if (bMatchMakerRunningInProgress)
 	{
-		RunBatchScript(MatchmakerPath);
-	});
+		if (HND_Matchmaker != NULL && HND_Matchmaker != INVALID_HANDLE_VALUE)
+		{
+			// 手动关闭进程
+			TerminateProcess(HND_Matchmaker, 0);
+			HND_Matchmaker = INVALID_HANDLE_VALUE;
+		}
+	}
+	else
+	{
+		const FString MatchmakerPath = FSettingsConfig::Get().GetLaunchConfig().MatchMakerBatchPath;
+
+		AsyncTask(ENamedThreads::AnyThread, [MatchmakerPath,this]()
+		{
+			bMatchMakerRunningInProgress = true;
+			LaunchMatchmakerBatchServer(MatchmakerPath, [this]()
+			{
+				UE_LOG(LogPixelStreamingManager, Display, TEXT("Matchmaker service shutdown."));
+				bMatchMakerRunningInProgress = false;
+			});
+		});
+	}
 
 	return FReply::Handled();
 }
@@ -701,7 +730,8 @@ void FPixelStreamingManager::RunBatScriptWithOutput(const FString& BatPath)
 }
 
 
-void FPixelStreamingManager::RunBatchScript(const FString& BatchScriptPath)
+void FPixelStreamingManager::LaunchMatchmakerBatchServer(const FString& BatchScriptPath,
+                                                         TUniqueFunction<void()> Callback)
 {
 	STARTUPINFOW si;
 	PROCESS_INFORMATION pi;
@@ -716,18 +746,22 @@ void FPixelStreamingManager::RunBatchScript(const FString& BatchScriptPath)
 	// Create the process
 	if (!::CreateProcessW(NULL, (LPWSTR)BatPathLPCWSTR, NULL, NULL, false, 0, NULL, NULL, &si, &pi))
 	{
-		UE_LOG(LogTemp, Error, TEXT("Failed to start bat script!"));
+		UE_LOG(LogPixelStreamingManager, Error, TEXT("Failed to start bat script!"));
+		Callback();
 		return;
 	}
+
+	HND_Matchmaker = pi.hProcess;
 
 	// Wait for the process to finish
 	WaitForSingleObject(pi.hProcess, INFINITE);
 
+
 	// Clean up
 	CloseHandle(pi.hProcess);
 	CloseHandle(pi.hThread);
+	Callback();
 }
-
 
 void FPixelStreamingManager::StartScan()
 {
@@ -836,6 +870,7 @@ void FPixelStreamingManager::CopyServer(FBackupServerInfo Config, FString Name)
 	Config.SingnallingServerLocalPath = BackupFolder / Config.ServerName / "platform_scripts/cmd/run_local.bat";
 	Config.SingnallingServerPublicPath = BackupFolder / Config.ServerName /
 		"platform_scripts/cmd/Start_WithTURN_SignallingServer.ps1";
+	Config.Config.UseMatchmaker = FSettingsConfig::Get().GetUseMatchmaker();
 
 	AllocPorts(Config.Config);
 
@@ -895,6 +930,7 @@ void FPixelStreamingManager::DeleteServer(FBackupServerInfo Config, FString Name
 
 void FPixelStreamingManager::ServerStateChanged(FBackupServerInfo Config, EServerState State)
 {
+
 }
 
 void FPixelStreamingManager::RenameServer(SPSServerSingleton* Target, FBackupServerInfo Config, FString NewName)
@@ -942,7 +978,6 @@ void FPixelStreamingManager::ChangePort(FBackupServerInfo& Config, EPortType Por
 	{
 		int TempPort = FCString::Atoi(*NewPort);
 
-		// @todo: change port in json files
 		switch (PortType)
 		{
 		case EPortType::E_Http:
@@ -1061,7 +1096,7 @@ void FPixelStreamingManager::AllocPorts(SignallingServerConfig& Config)
 	while (AllExistsPorts.Contains(_streamer));
 	Config.StreamerPort = _streamer;
 	AllExistsPorts.Add(_streamer);
-	Config.PublicIp = FSettingsConfig::Get().GetPublicIP();
+	Config.PublicIp = FSettingsConfig::Get().GetIsPublic() ? FSettingsConfig::Get().GetPublicIP() : "localhost";
 }
 
 bool FPixelStreamingManager::IsPortAvailable(FString& Port)

@@ -71,6 +71,8 @@ private:
 	const float ScrollBarPadding = 2.f;
 
 	TMap<FString, FBackupServerInfo> ExistsServer;
+	bool bMatchMakerRunningInProgress = false;
+	HANDLE HND_Matchmaker;
 public:
 	/****** MANNULLY TICK BEGIN ******/
 	bool ScanTaskTick(float UnusedDeltaTime);
@@ -97,10 +99,10 @@ public:
 	bool CanDoScan() const;
 
 	FReply DoScan();
-	FReply LaunchMatchMaker();
+	FReply ToggleMatchMaker();
 	
 	void RunBatScriptWithOutput(const FString& BatPath);
-	void RunBatchScript(const FString& BatchScriptPath);
+	void LaunchMatchmakerBatchServer(const FString& BatchScriptPath,TUniqueFunction<void()> Callback);
 
 	void StartScan();
 

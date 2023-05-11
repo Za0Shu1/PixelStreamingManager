@@ -10,6 +10,8 @@ class SEditableText;
 class SPSServerSingleton;
 class STextProperty;
 
+DECLARE_LOG_CATEGORY_EXTERN(LogPSServer, Log, All);
+
 enum class EServerState : uint8
 {
 	E_Running,
@@ -89,5 +91,16 @@ public:
 
 protected:
 	bool GetIsEnabled() const;
+	void CloseServerHandle();
+	FReply OnButtonClick();
+	void RunServerScript(const FString& ScriptPath, TUniqueFunction<void(int)> Callback);
+	void RunUnrealClient(const FString& ExePath, const FString& ExtraCommands, TUniqueFunction<void(int)> Callback);
+
 private:
+	HANDLE HND_SingallingServer = NULL;
+	HANDLE HND_UnrealClient = NULL;
+	inline bool GetIsValidHandle(HANDLE InHandle)
+	{
+		return InHandle != NULL && InHandle != INVALID_HANDLE_VALUE;
+	}
 };
