@@ -62,5 +62,12 @@ TSharedRef<FSlateStyleSet> FPSManagerStyle::Create()
 	                                  .SetPressed(IMAGE_BRUSH("/Icons/Delete", Icon20x20));
 
 	Style->Set("DeleteButton", DeleteButton);
+
+	const FButtonStyle PreviewButton = FButtonStyle()
+									  .SetNormal(IMAGE_BRUSH("/Icons/Preview", Icon20x20))
+									  .SetHovered(IMAGE_BRUSH("/Icons/Preview", Icon20x20))
+									  .SetPressed(IMAGE_BRUSH("/Icons/Preview", Icon20x20));
+
+	Style->Set("PreviewButton", PreviewButton);
 	return Style;
 }

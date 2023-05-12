@@ -16,6 +16,8 @@
 #include <string>
 
 #include "Async/Async.h"
+#include "Common/UPSUtils.h"
+#include "Runtime/Online/HTTP/Public/Http.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Images/SThrobber.h"
 #include "Widgets/Layout/SBox.h"
@@ -129,6 +131,16 @@ FPixelStreamingManager::~FPixelStreamingManager()
 void FPixelStreamingManager::ShutDown()
 {
 	FTSTicker::GetCoreTicker().RemoveTicker(GlobalTickHandle);
+
+	if (bMatchMakerRunningInProgress)
+	{
+		if (HND_Matchmaker != NULL && HND_Matchmaker != INVALID_HANDLE_VALUE)
+		{
+			// 手动关闭进程
+			TerminateProcess(HND_Matchmaker, 0);
+			HND_Matchmaker = INVALID_HANDLE_VALUE;
+		}
+	}
 }
 
 #pragma region Mannully Hand Tick
@@ -429,7 +441,6 @@ void FPixelStreamingManager::Run()
 								+ SHorizontalBox::Slot()
 								[
 									SNew(SButton)
-									.Text(FText(LOCTEXT("LaunchMatchmaker", "启动Matchmaker")))
 									.Text_Lambda([this]()
 									             {
 										             FText _Run(LOCTEXT("LaunchMatchmaker", "启动Matchmaker"));
@@ -453,6 +464,21 @@ void FPixelStreamingManager::Run()
 									.IsEnabled_Raw(this, &FPixelStreamingManager::CanDoScan)
 									.OnClicked_Raw(this, &FPixelStreamingManager::DoScan)
 									.ToolTipText_Raw(this, &FPixelStreamingManager::GenerateScanToolTip)
+								]
+
+								+ SHorizontalBox::Slot()
+								  .AutoWidth()
+								  .Padding(FMargin(2.f, 0.f, 0.f, 0.f))
+								[
+									SNew(SButton)
+									.Text(FText(LOCTEXT("GetAddress", "获取地址")))
+									.Visibility_Lambda([this]()
+									             {
+										             return bMatchMakerRunningInProgress
+											                    ? EVisibility::Visible
+											                    : EVisibility::Collapsed;
+									             })
+									.OnClicked_Raw(this, &FPixelStreamingManager::OnGetAddressRequest)
 								]
 							]
 						]
@@ -499,9 +525,9 @@ void FPixelStreamingManager::Run()
 								// 		.BorderImage(FAppStyle::GetBrush("WhiteBrush"))
 								// 		.BorderBackgroundColor(FromHex("0000ff"))
 								SAssignNew(ServersContainer, SWrapBox)
-														.Orientation(EOrientation::Orient_Horizontal)
-														.UseAllottedSize(true) //自适应尺寸，避免每个item都独占一行或一列
-														.HAlign(HAlign_Left)
+													                  .Orientation(EOrientation::Orient_Horizontal)
+													                  .UseAllottedSize(true) //自适应尺寸，避免每个item都独占一行或一列
+													                  .HAlign(HAlign_Left)
 							]
 						]
 					]
@@ -527,9 +553,9 @@ void FPixelStreamingManager::Run()
 						[
 							// Circular Throbber
 							SNew(SCircularThrobber)
-							.Radius(50.f)
-							.Period(1.f)
-							.NumPieces(20)
+												                  .Radius(50.f)
+												                  .Period(1.f)
+												                  .NumPieces(20)
 						]
 
 						+ SOverlay::Slot()
@@ -637,6 +663,95 @@ FReply FPixelStreamingManager::ToggleMatchMaker()
 	}
 
 	return FReply::Handled();
+}
+
+FReply FPixelStreamingManager::OnGetAddressRequest()
+{
+	AllocateAccessAddressFromMatchmaker([](FString Response)
+	{
+		if (Response.Contains("No signalling servers available"))
+		{
+			FText Title = FText::FromString("Failed");
+			FMessageDialog::Open(
+				EAppMsgType::Ok,
+				LOCTEXT("NoAddress", "暂无可预览地址"),
+				&Title);
+		}
+		else
+		{
+			FString Addr = Response;
+			if (UPSUtils::Get().GetJsonValue(Response, "signallingServer", Addr))
+			{
+
+				FText Title = FText::FromString("Success");
+				FText Message = FText::Format(LOCTEXT("GetAddressFinished", "访问地址:{0},是否复制到剪贴板?"), FText::FromString(Addr));
+					
+				EAppReturnType::Type UserChoice = FMessageDialog::Open(
+					EAppMsgType::OkCancel,
+					Message,
+					&Title);
+				if (UserChoice == EAppReturnType::Ok)
+				{
+					// 用户点击了 "OK" 按钮
+					UPSUtils::Get().CopyToClipBoard(Addr);
+				}
+				else if (UserChoice == EAppReturnType::Cancel)
+				{
+					// 用户点击了 "Cancel" 按钮
+				}
+				else
+				{
+					// 用户关闭了对话框或点击了其他按钮类型
+				}
+			}
+			else
+			{
+				FText Title = FText::FromString("ERROR");
+				FMessageDialog::Open(
+					EAppMsgType::Ok,
+					LOCTEXT("AddressError", "地址异常"),
+					&Title);
+			}
+		}
+	});
+	return FReply::Handled();
+}
+
+void FPixelStreamingManager::AllocateAccessAddressFromMatchmaker(TUniqueFunction<void(FString)> Response)
+{
+	// 获取HTTP模块并创建HTTP请求
+	TSharedRef<IHttpRequest> HttpRequest = FHttpModule::Get().CreateRequest();
+	HttpRequest->SetVerb("GET");
+	HttpRequest->SetURL("http://localhost:90/signallingserver");
+
+	GetAddressCallback = MoveTemp(Response);
+	// 设置响应处理函数
+	HttpRequest->OnProcessRequestComplete().BindLambda(
+		[this](FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSuccess)
+		{
+			if (bSuccess && HttpResponse.IsValid())
+			{
+				// 响应状态码为200表示成功
+				if (HttpResponse->GetResponseCode() == 200)
+				{
+					FString ResponseStr = HttpResponse->GetContentAsString();
+					// 处理响应内容
+					UE_LOG(LogPixelStreamingManager, Log, TEXT("HTTP GET request success with response: %s"),
+					       *ResponseStr);
+
+					UE_LOG(LogPixelStreamingManager, Log, TEXT("Callback : %p"), &GetAddressCallback);
+
+					GetAddressCallback(ResponseStr);
+				}
+			}
+			else
+			{
+				UE_LOG(LogPixelStreamingManager, Warning, TEXT("HTTP GET request failed"));
+			}
+		});
+
+	// 发送HTTP请求
+	HttpRequest->ProcessRequest();
 }
 
 void FPixelStreamingManager::RunBatScriptWithOutput(const FString& BatPath)
@@ -930,7 +1045,6 @@ void FPixelStreamingManager::DeleteServer(FBackupServerInfo Config, FString Name
 
 void FPixelStreamingManager::ServerStateChanged(FBackupServerInfo Config, EServerState State)
 {
-
 }
 
 void FPixelStreamingManager::RenameServer(SPSServerSingleton* Target, FBackupServerInfo Config, FString NewName)

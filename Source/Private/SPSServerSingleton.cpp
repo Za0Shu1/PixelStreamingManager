@@ -4,6 +4,7 @@
 #include "SlateOptMacros.h"
 #include "Async/Async.h"
 #include "Common/STextProperty.h"
+#include "Misc/CoreDelegates.h"
 #include "Widgets/SOverlay.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SButton.h"
@@ -22,6 +23,10 @@ DEFINE_LOG_CATEGORY(LogPSServer);
 
 SPSServerSingleton::SPSServerSingleton()
 {
+	FCoreDelegates::OnExit.AddLambda([this]()
+	{
+		CloseServerHandle();
+	});
 }
 
 SPSServerSingleton::~SPSServerSingleton()
@@ -86,6 +91,7 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 					.HAlign(HAlign_Fill)
 					.VAlign(VAlign_Fill)
 					.Visibility(bIsBackupServer ? EVisibility::Visible : EVisibility::Collapsed)
+					.ToolTipText(FText::FromString("Launch"))
 					.ButtonStyle(FCoreStyle::Get(), "NoBorder")
 					// onclick
 					.IsEnabled_Lambda([this]()
@@ -157,6 +163,7 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 							.HAlign(HAlign_Center)
 							.ButtonStyle(FPSManagerStyle::Get(),TEXT("CopyButton"))
 							.Visibility(EVisibility::Visible)
+							.ToolTipText(FText::FromString("Copy"))
 							.IsEnabled_Lambda([this]()
 							             {
 								             return !bIsBackupServer || State != EServerState::E_Running;
@@ -183,6 +190,7 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 							.HAlign(HAlign_Center)
 							.ButtonStyle(FPSManagerStyle::Get(),TEXT("DeleteButton"))
 							.Visibility(bIsBackupServer ? EVisibility::Visible : EVisibility::Collapsed)
+							.ToolTipText(FText::FromString("Delete"))
 							.IsEnabled_Lambda([this]()
 							             {
 								             return State != EServerState::E_Running;
@@ -193,6 +201,38 @@ void SPSServerSingleton::Construct(const FArguments& InArgs)
 								             return FReply::Handled();
 							             })
 						]
+					]
+
+					// preview button
+					+ SHorizontalBox::Slot()
+					.AutoWidth()
+					[
+						SNew(SBox)
+						.MaxDesiredHeight(32.f)
+						.MaxDesiredWidth(32.f)
+						.Padding(FMargin(2.f, 5.f, 2.f, 0.f))
+						[
+							SNew(SButton)
+							.VAlign(VAlign_Center)
+							.HAlign(HAlign_Center)
+							.ButtonStyle(FPSManagerStyle::Get(),TEXT("PreviewButton"))
+							.ToolTipText(FText::FromString("Preview"))
+							.Visibility_Lambda([this]()
+							             {
+								             return bIsBackupServer && State == EServerState::E_Running
+									                    ? EVisibility::Visible
+									                    : EVisibility::Collapsed;
+							             })
+
+							 .OnClicked_Lambda([this]()
+							             {
+								             const FString URL = GetPreviewURL();
+								             UE_LOG(LogPSServer, Display, TEXT("Launch URL : %s"), *URL);
+								             FPlatformProcess::LaunchURL(*URL, nullptr, nullptr);
+								             return FReply::Handled();
+							             })
+						]
+
 					]
 
 				]
@@ -267,6 +307,26 @@ bool SPSServerSingleton::GetIsEnabled() const
 	return bIsBackupServer && State != EServerState::E_Running;
 }
 
+FString SPSServerSingleton::GetPreviewURL()
+{
+	FString URL;
+	FString Protocol = Config.Config.UseHTTPS ? "https://" : "http://";
+	uint16 Port = Config.Config.UseHTTPS ? Config.Config.HttpsPort : Config.Config.HttpPort;
+
+	FString IP;
+	if (Config.Config.PublicIp == "localhost")
+	{
+		IP = "127.0.0.1";
+	}
+	else
+	{
+		FString _protocal;
+		Config.Config.PublicIp.Split("//", &_protocal, &IP, ESearchCase::IgnoreCase, ESearchDir::FromStart);
+	}
+
+	return Protocol + IP + ":" + FString::FromInt(Port);
+}
+
 void SPSServerSingleton::CloseServerHandle()
 {
 	if (HND_SingallingServer != NULL && HND_SingallingServer != INVALID_HANDLE_VALUE)
@@ -310,7 +370,7 @@ FReply SPSServerSingleton::OnButtonClick()
 					break;
 				case 1:
 					UE_LOG(LogPSServer, Display, TEXT("Singalling server is running..."));
-					if(GetIsValidHandle(HND_UnrealClient))
+					if (GetIsValidHandle(HND_UnrealClient))
 					{
 						State = EServerState::E_Running;
 					}
@@ -338,10 +398,10 @@ FReply SPSServerSingleton::OnButtonClick()
 					UE_LOG(LogPSServer, Display, TEXT("Unreal client shutdown."));
 					CloseServerHandle();
 					break;
-					
+
 				case 1:
 					UE_LOG(LogPSServer, Display, TEXT("Unreal client is running..."));
-					if(GetIsValidHandle(HND_SingallingServer))
+					if (GetIsValidHandle(HND_SingallingServer))
 					{
 						State = EServerState::E_Running;
 					}

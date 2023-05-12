@@ -73,6 +73,8 @@ private:
 	TMap<FString, FBackupServerInfo> ExistsServer;
 	bool bMatchMakerRunningInProgress = false;
 	HANDLE HND_Matchmaker;
+	TUniqueFunction<void(FString)> GetAddressCallback;
+	
 public:
 	/****** MANNULLY TICK BEGIN ******/
 	bool ScanTaskTick(float UnusedDeltaTime);
@@ -100,7 +102,10 @@ public:
 
 	FReply DoScan();
 	FReply ToggleMatchMaker();
-	
+
+	FReply OnGetAddressRequest();
+	void AllocateAccessAddressFromMatchmaker(TUniqueFunction<void(FString)> Response);
+
 	void RunBatScriptWithOutput(const FString& BatPath);
 	void LaunchMatchmakerBatchServer(const FString& BatchScriptPath,TUniqueFunction<void()> Callback);
 

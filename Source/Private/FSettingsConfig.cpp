@@ -25,17 +25,17 @@ FSettingsConfig::FSettingsConfig()
 
 	if (!GConfig->GetString(*SectionName,TEXT("PublicIP"), PublicIP, GEngineIni))
 	{
-		PublicIP = "";
+		PublicIP = "localhost";
 	}
 
 	if (!GConfig->GetString(*SectionName,TEXT("ProjectName"), ProjectName, GEngineIni))
 	{
-		ProjectName = "未命名";
+		ProjectName = "Unknown";
 	}
 
 	if (!GConfig->GetString(*SectionName,TEXT("ExtraCommands"), ExtraCommands, GEngineIni))
 	{
-		ExtraCommands = "";
+		ExtraCommands = " -AudioMixer -RenderOffScreen ";
 	}
 
 	if (!GConfig->GetBool(*SectionName,TEXT("bIsPublic"), bIsPublic, GEngineIni))
@@ -49,22 +49,26 @@ FSettingsConfig::FSettingsConfig()
 	}
 
 #pragma region Default Server Config
-	if (!GConfig->GetString(*ServerSectionName,TEXT("MatchMakerBatchPath"), LaunchConfig.MatchMakerBatchPath, GEngineIni))
+	if (!GConfig->GetString(*ServerSectionName,TEXT("MatchMakerBatchPath"), LaunchConfig.MatchMakerBatchPath,
+	                        GEngineIni))
 	{
 		LaunchConfig.MatchMakerBatchPath = "";
 	}
 
-	if (!GConfig->GetString(*ServerSectionName,TEXT("SingnallingServerConfigPath"), LaunchConfig.SingnallingServerConfigPath, GEngineIni))
+	if (!GConfig->GetString(*ServerSectionName,TEXT("SingnallingServerConfigPath"),
+	                        LaunchConfig.SingnallingServerConfigPath, GEngineIni))
 	{
 		LaunchConfig.SingnallingServerConfigPath = "";
 	}
 
-	if (!GConfig->GetString(*ServerSectionName,TEXT("SingnallingServerLocalPath"), LaunchConfig.SingnallingServerLocalPath, GEngineIni))
+	if (!GConfig->GetString(*ServerSectionName,TEXT("SingnallingServerLocalPath"),
+	                        LaunchConfig.SingnallingServerLocalPath, GEngineIni))
 	{
 		LaunchConfig.SingnallingServerLocalPath = "";
 	}
 
-	if (!GConfig->GetString(*ServerSectionName,TEXT("SingnallingServerPublicPath"), LaunchConfig.SingnallingServerPublicPath, GEngineIni))
+	if (!GConfig->GetString(*ServerSectionName,TEXT("SingnallingServerPublicPath"),
+	                        LaunchConfig.SingnallingServerPublicPath, GEngineIni))
 	{
 		LaunchConfig.SingnallingServerPublicPath = "";
 	}
@@ -74,7 +78,6 @@ FSettingsConfig::FSettingsConfig()
 		LaunchConfig.ServersRoot = "";
 	}
 #pragma endregion
-
 }
 
 const bool& FSettingsConfig::IsClientValid()
@@ -94,7 +97,6 @@ const bool& FSettingsConfig::IsClientValid()
 			{
 				UE_LOG(LogPSSettings, Display, TEXT("Product version : %s "), ProductVersion);
 				bClientValid = FString(ProductVersion).Contains("UE4") || FString(ProductVersion).Contains("UE5");
-
 			}
 
 			TCHAR* FileDescription;
@@ -106,7 +108,7 @@ const bool& FSettingsConfig::IsClientValid()
 			}
 		}
 	}
-	if(!bClientValid)
+	if (!bClientValid)
 	{
 		UE_LOG(LogPSSettings, Error, TEXT("Can not valid exe file."));
 	}
@@ -154,7 +156,7 @@ void FSettingsConfig::SetIsPublic(bool InBool)
 void FSettingsConfig::SetUseMatchmaker(bool InBool)
 {
 	bUseMatchmaker = InBool;
-	GConfig->SetBool(*SectionName,TEXT("bUseMatchmaker"), bIsPublic, GEngineIni);
+	GConfig->SetBool(*SectionName,TEXT("bUseMatchmaker"), bUseMatchmaker, GEngineIni);
 }
 
 void FSettingsConfig::ValidServer(FString InCondition)
@@ -165,13 +167,17 @@ void FSettingsConfig::ValidServer(FString InCondition)
 	}
 
 	bServerValid = ValidationConditions.IsEmpty();
-	
-	if(bServerValid)
+
+	if (bServerValid)
 	{
-		GConfig->SetString(*ServerSectionName, TEXT("MatchMakerBatchPath"), *LaunchConfig.MatchMakerBatchPath, GEngineIni);
-		GConfig->SetString(*ServerSectionName, TEXT("SingnallingServerConfigPath"), *LaunchConfig.SingnallingServerConfigPath, GEngineIni);
-		GConfig->SetString(*ServerSectionName, TEXT("SingnallingServerLocalPath"), *LaunchConfig.SingnallingServerLocalPath, GEngineIni);
-		GConfig->SetString(*ServerSectionName, TEXT("SingnallingServerPublicPath"), *LaunchConfig.SingnallingServerPublicPath, GEngineIni);
+		GConfig->SetString(*ServerSectionName, TEXT("MatchMakerBatchPath"), *LaunchConfig.MatchMakerBatchPath,
+		                   GEngineIni);
+		GConfig->SetString(*ServerSectionName, TEXT("SingnallingServerConfigPath"),
+		                   *LaunchConfig.SingnallingServerConfigPath, GEngineIni);
+		GConfig->SetString(*ServerSectionName, TEXT("SingnallingServerLocalPath"),
+		                   *LaunchConfig.SingnallingServerLocalPath, GEngineIni);
+		GConfig->SetString(*ServerSectionName, TEXT("SingnallingServerPublicPath"),
+		                   *LaunchConfig.SingnallingServerPublicPath, GEngineIni);
 		GConfig->SetString(*ServerSectionName, TEXT("ServersRoot"), *LaunchConfig.ServersRoot, GEngineIni);
 	}
 }

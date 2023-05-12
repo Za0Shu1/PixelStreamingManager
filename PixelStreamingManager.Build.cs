@@ -22,7 +22,8 @@ public class PixelStreamingManager : ModuleRules
 				"StandaloneRenderer",
 				"DesktopPlatform",
 				"Json",
-				"JsonUtilities"
+				"JsonUtilities",
+				"HTTP"
 		   });
 	}
 }

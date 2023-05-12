@@ -91,6 +91,7 @@ public:
 
 protected:
 	bool GetIsEnabled() const;
+	FString GetPreviewURL();
 	void CloseServerHandle();
 	FReply OnButtonClick();
 	void RunServerScript(const FString& ScriptPath, TUniqueFunction<void(int)> Callback);
