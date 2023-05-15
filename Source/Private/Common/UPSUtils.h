@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "CoreMinimal.h"
+#include "Windows.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogPSUtils, Log, All);
 
@@ -15,6 +16,9 @@ public:
 	void CopyToClipBoard(FString InContent);
 	
 	bool GetJsonValue(const FString& JsonString, const FString& FieldName, FString& OutValue);
+
+	void TerminateProcessByHandle(HANDLE& Handle);
+	bool IsIPAddress(const FString& IPAddressString);
 
 private:
 };

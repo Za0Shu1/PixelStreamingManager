@@ -1,9 +1,12 @@
 ﻿#include "UPSUtils.h"
 
+#include <string>
+
 #include "Dom/JsonObject.h"
 #include "PixelStreamingManager/Source/Private/FSettingsConfig.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+#include "Interfaces/IPv4/IPv4Address.h"
 
 DEFINE_LOG_CATEGORY(LogPSUtils);
 
@@ -67,4 +70,33 @@ bool UPSUtils::GetJsonValue(const FString& JsonString, const FString& FieldName,
 
 	// 成功提取字段值
 	return true;
+}
+
+void UPSUtils::TerminateProcessByHandle(HANDLE& Handle)
+{
+	if (Handle != NULL && Handle != INVALID_HANDLE_VALUE)
+	{
+		DWORD processId = GetProcessId(Handle);
+		UE_LOG(LogPSUtils,Warning,TEXT("Gonna close process that PID is %u."),processId);
+		
+		std::wstring command = L"taskkill /PID " + std::to_wstring(processId) + L" /T /F";
+		STARTUPINFOW startupInfo = { sizeof(STARTUPINFOW) };
+		PROCESS_INFORMATION processInfo;
+
+		CreateProcessW(NULL, const_cast<LPWSTR>(command.c_str()), NULL, NULL, false, 0, NULL, NULL, &startupInfo, &processInfo);
+
+		WaitForSingleObject(processInfo.hProcess, INFINITE);
+
+		CloseHandle(processInfo.hProcess);
+		CloseHandle(processInfo.hThread);
+
+		Handle = INVALID_HANDLE_VALUE;
+	}
+}
+
+bool UPSUtils::IsIPAddress(const FString& IPAddressString)
+{
+	FIPv4Address IPv4Address;
+
+	return FIPv4Address::Parse(IPAddressString, IPv4Address);
 }

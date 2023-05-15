@@ -44,6 +44,8 @@ public:
 	~FPixelStreamingManager();
 
 	void ShutDown();
+	void CloseProcess();
+	void TerminateProcessByHandle(DWORD ProcessID);
 
 private:
 	FSlateApplication& Slate;

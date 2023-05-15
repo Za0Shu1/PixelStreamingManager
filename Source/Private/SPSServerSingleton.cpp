@@ -4,6 +4,7 @@
 #include "SlateOptMacros.h"
 #include "Async/Async.h"
 #include "Common/STextProperty.h"
+#include "Common/UPSUtils.h"
 #include "Misc/CoreDelegates.h"
 #include "Widgets/SOverlay.h"
 #include "Widgets/Images/SImage.h"
@@ -313,15 +314,16 @@ FString SPSServerSingleton::GetPreviewURL()
 	FString Protocol = Config.Config.UseHTTPS ? "https://" : "http://";
 	uint16 Port = Config.Config.UseHTTPS ? Config.Config.HttpsPort : Config.Config.HttpPort;
 
-	FString IP;
+	FString IP = Config.Config.PublicIp;
 	if (Config.Config.PublicIp == "localhost")
 	{
 		IP = "127.0.0.1";
 	}
-	else
+	
+	if(!UPSUtils::Get().IsIPAddress(IP))
 	{
-		FString _protocal;
-		Config.Config.PublicIp.Split("//", &_protocal, &IP, ESearchCase::IgnoreCase, ESearchDir::FromStart);
+		IP = "";
+		UE_LOG(LogPSServer,Error,TEXT("Invalid IPV4 address for public IP."))
 	}
 
 	return Protocol + IP + ":" + FString::FromInt(Port);
@@ -331,18 +333,13 @@ void SPSServerSingleton::CloseServerHandle()
 {
 	if (HND_SingallingServer != NULL && HND_SingallingServer != INVALID_HANDLE_VALUE)
 	{
-		// 手动关闭进程
-		TerminateProcess(HND_SingallingServer, 0);
-		HND_SingallingServer = INVALID_HANDLE_VALUE;
+		UPSUtils::Get().TerminateProcessByHandle(HND_SingallingServer);
 	}
-
-	if (HND_UnrealClient != NULL && HND_UnrealClient != INVALID_HANDLE_VALUE)
+	else if (HND_UnrealClient != NULL && HND_UnrealClient != INVALID_HANDLE_VALUE)
 	{
-		// 手动关闭进程
-		TerminateProcess(HND_UnrealClient, 0);
-		HND_UnrealClient = INVALID_HANDLE_VALUE;
+		UPSUtils::Get().TerminateProcessByHandle(HND_UnrealClient);
 	}
-
+	
 	State = EServerState::E_Stop;
 }
 
@@ -366,7 +363,12 @@ FReply SPSServerSingleton::OnButtonClick()
 					break;
 				case 0:
 					UE_LOG(LogPSServer, Display, TEXT("Singalling server shutdown."));
-					CloseServerHandle();
+					
+					if (HND_UnrealClient != NULL && HND_UnrealClient != INVALID_HANDLE_VALUE)
+					{
+						UPSUtils::Get().TerminateProcessByHandle(HND_UnrealClient);
+					}
+					State = EServerState::E_Stop;
 					break;
 				case 1:
 					UE_LOG(LogPSServer, Display, TEXT("Singalling server is running..."));
@@ -381,8 +383,8 @@ FReply SPSServerSingleton::OnButtonClick()
 
 		// RUN UNREAL CLIENT
 		const FString ExtraCommands = FSettingsConfig::Get().GetExtraCommands() + " -PixelStreamingIP=" + Config.Config.
-			PublicIp + " _PixelStreamingPort=" + FString::FromInt(Config.Config.StreamerPort);
-		UE_LOG(LogPSServer, Error, TEXT("commands: ===%s"), *ExtraCommands);
+			PublicIp + " -PixelStreamingPort=" + FString::FromInt(Config.Config.StreamerPort);
+		UE_LOG(LogPSServer, Display, TEXT("commands: ===%s"), *ExtraCommands);
 
 		AsyncTask(ENamedThreads::AnyThread, [&,ExtraCommands,this]()
 		{
@@ -396,7 +398,11 @@ FReply SPSServerSingleton::OnButtonClick()
 
 				case 0:
 					UE_LOG(LogPSServer, Display, TEXT("Unreal client shutdown."));
-					CloseServerHandle();
+					if (HND_SingallingServer != NULL && HND_SingallingServer != INVALID_HANDLE_VALUE)
+					{
+						UPSUtils::Get().TerminateProcessByHandle(HND_SingallingServer);
+					}
+					State = EServerState::E_Stop;
 					break;
 
 				case 1:
@@ -475,6 +481,7 @@ void SPSServerSingleton::RunServerScript(const FString& ScriptPath,
 	// Clean up
 	CloseHandle(pi.hProcess);
 	CloseHandle(pi.hThread);
+	HND_SingallingServer = INVALID_HANDLE_VALUE;
 	Callback(0);
 }
 
@@ -488,14 +495,12 @@ void SPSServerSingleton::RunUnrealClient(const FString& ExePath, const FString& 
 	si.cb = sizeof(si);
 	ZeroMemory(&pi, sizeof(pi));
 
-	UE_LOG(LogPSServer, Error, TEXT("commands: ===%s"), *ExtraCommands);
-
 	FString ScriptArgument = FString::Printf(TEXT("%s %s"), *ExePath, *ExtraCommands);
 
 	// Convert the strings to LPCWSTR
 	LPCWSTR ScriptArgumentLPCWSTR = (LPCWSTR)*ScriptArgument;
 
-	UE_LOG(LogPSServer, Error, TEXT("====  %s"), *ScriptArgument);
+	UE_LOG(LogPSServer, Display, TEXT("====  %s"), *ScriptArgument);
 
 	// Create the process
 	if (!::CreateProcessW(NULL, (LPWSTR)ScriptArgumentLPCWSTR, NULL, NULL, false, 0, NULL, NULL,
@@ -516,6 +521,7 @@ void SPSServerSingleton::RunUnrealClient(const FString& ExePath, const FString& 
 	// Clean up
 	CloseHandle(pi.hProcess);
 	CloseHandle(pi.hThread);
+	HND_UnrealClient = INVALID_HANDLE_VALUE;
 	Callback(0);
 }
 

@@ -134,13 +134,27 @@ void FPixelStreamingManager::ShutDown()
 
 	if (bMatchMakerRunningInProgress)
 	{
-		if (HND_Matchmaker != NULL && HND_Matchmaker != INVALID_HANDLE_VALUE)
-		{
-			// 手动关闭进程
-			TerminateProcess(HND_Matchmaker, 0);
-			HND_Matchmaker = INVALID_HANDLE_VALUE;
-		}
+		CloseProcess();
 	}
+}
+
+void FPixelStreamingManager::CloseProcess()
+{
+	UPSUtils::Get().TerminateProcessByHandle(HND_Matchmaker);
+}
+
+void FPixelStreamingManager::TerminateProcessByHandle(DWORD ProcessID)
+{
+	std::wstring command = L"taskkill /PID " + std::to_wstring(ProcessID) + L" /T /F";
+	STARTUPINFOW startupInfo = { sizeof(STARTUPINFOW) };
+	PROCESS_INFORMATION processInfo;
+
+	CreateProcessW(NULL, const_cast<LPWSTR>(command.c_str()), NULL, NULL, false, 0, NULL, NULL, &startupInfo, &processInfo);
+
+	WaitForSingleObject(processInfo.hProcess, INFINITE);
+
+	CloseHandle(processInfo.hProcess);
+	CloseHandle(processInfo.hThread);
 }
 
 #pragma region Mannully Hand Tick
@@ -640,12 +654,8 @@ FReply FPixelStreamingManager::ToggleMatchMaker()
 {
 	if (bMatchMakerRunningInProgress)
 	{
-		if (HND_Matchmaker != NULL && HND_Matchmaker != INVALID_HANDLE_VALUE)
-		{
-			// 手动关闭进程
-			TerminateProcess(HND_Matchmaker, 0);
-			HND_Matchmaker = INVALID_HANDLE_VALUE;
-		}
+		// 手动关闭进程
+		CloseProcess();
 	}
 	else
 	{

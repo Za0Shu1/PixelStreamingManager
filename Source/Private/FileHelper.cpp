@@ -122,10 +122,10 @@ void FileHelper::AddServerIntoConfig(FBackupServerInfo Config)
 				obj->SetStringField("SingnallingServerPublicPath", Config.SingnallingServerPublicPath);
 				obj->SetStringField("ConfigFilePath", Config.ConfigFilePath);
 
-				TArray<TSharedPtr<FJsonValue>>* Temp = const_cast<TArray<TSharedPtr<FJsonValue>>*>(OutArray);
-				Temp->Add(MakeShareable(new FJsonValueObject(obj)));
+				TArray<TSharedPtr<FJsonValue>> Temp = *OutArray;
+				Temp.Add(MakeShareable(new FJsonValueObject(obj)));
 
-				RootObj->SetArrayField(TEXT("Servers"), *Temp);
+				RootObj->SetArrayField(TEXT("Servers"), Temp);
 
 				//Write the json file
 				FString Json;
@@ -135,6 +135,27 @@ void FileHelper::AddServerIntoConfig(FBackupServerInfo Config)
 					FFileHelper::SaveStringToFile(Json, *JsonFile);
 				}
 			}
+		}
+	}
+	else
+	{
+		TSharedPtr<FJsonObject> RootObj = MakeShareable(new FJsonObject());
+
+		TSharedPtr<FJsonObject> obj = MakeShareable(new FJsonObject());
+		obj->SetStringField("ServerName", Config.ServerName);
+		obj->SetStringField("SingnallingServerLocalPath", Config.SingnallingServerLocalPath);
+		obj->SetStringField("SingnallingServerPublicPath", Config.SingnallingServerPublicPath);
+		obj->SetStringField("ConfigFilePath", Config.ConfigFilePath);
+
+		TArray<TSharedPtr<FJsonValue>> Temp = {MakeShareable(new FJsonValueObject(obj))};
+		RootObj->SetArrayField(TEXT("Servers"), Temp);
+
+		//Write the json file
+		FString Json;
+		TSharedRef<TJsonWriter<>> JsonWriter = TJsonWriterFactory<>::Create(&Json, 0);
+		if (FJsonSerializer::Serialize(RootObj.ToSharedRef(), JsonWriter))
+		{
+			FFileHelper::SaveStringToFile(Json, *JsonFile);
 		}
 	}
 }

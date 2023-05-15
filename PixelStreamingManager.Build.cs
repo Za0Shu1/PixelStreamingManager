@@ -23,7 +23,8 @@ public class PixelStreamingManager : ModuleRules
 				"DesktopPlatform",
 				"Json",
 				"JsonUtilities",
-				"HTTP"
+				"HTTP",
+				"Networking"
 		   });
 	}
 }
