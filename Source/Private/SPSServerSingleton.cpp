@@ -314,17 +314,19 @@ FString SPSServerSingleton::GetPreviewURL()
 	FString Protocol = Config.Config.UseHTTPS ? "https://" : "http://";
 	uint16 Port = Config.Config.UseHTTPS ? Config.Config.HttpsPort : Config.Config.HttpPort;
 
-	FString IP = Config.Config.PublicIp;
-	if (Config.Config.PublicIp == "localhost")
-	{
-		IP = "127.0.0.1";
-	}
-	
-	if(!UPSUtils::Get().IsIPAddress(IP))
-	{
-		IP = "";
-		UE_LOG(LogPSServer,Error,TEXT("Invalid IPV4 address for public IP."))
-	}
+	// we can access at localhost,instead of public ip
+	FString IP = "localhost";
+	// FString IP = Config.Config.PublicIp;
+	// if (Config.Config.PublicIp == "localhost")
+	// {
+	// 	IP = "127.0.0.1";
+	// }
+	//
+	// if (!UPSUtils::Get().IsIPAddress(IP))
+	// {
+	// 	IP = "";
+	// 	UE_LOG(LogPSServer, Error, TEXT("Invalid IPV4 address for public IP."))
+	// }
 
 	return Protocol + IP + ":" + FString::FromInt(Port);
 }
@@ -334,17 +336,29 @@ void SPSServerSingleton::CloseServerHandle()
 	if (HND_SingallingServer != NULL && HND_SingallingServer != INVALID_HANDLE_VALUE)
 	{
 		UPSUtils::Get().TerminateProcessByHandle(HND_SingallingServer);
+		if (FSettingsConfig::Get().GetIsPublic())
+		{
+			// close turn server started in ps1 file
+			UPSUtils::Get().TerminateProcessByName(TEXT("turnserver.exe"));
+		}
 	}
 	else if (HND_UnrealClient != NULL && HND_UnrealClient != INVALID_HANDLE_VALUE)
 	{
 		UPSUtils::Get().TerminateProcessByHandle(HND_UnrealClient);
 	}
-	
+
 	State = EServerState::E_Stop;
 }
 
 FReply SPSServerSingleton::OnButtonClick()
 {
+	// update config if settings changed.
+	if (!UpdateConfigBeforeLaunch())
+	{
+		return FReply::Handled();
+	}
+	UE_LOG(LogPSServer, Warning, TEXT("Config update finished."));
+
 	if (State == EServerState::E_Stop)
 	{
 		// RUN SIGNALLING SERVER
@@ -363,7 +377,7 @@ FReply SPSServerSingleton::OnButtonClick()
 					break;
 				case 0:
 					UE_LOG(LogPSServer, Display, TEXT("Singalling server shutdown."));
-					
+
 					if (HND_UnrealClient != NULL && HND_UnrealClient != INVALID_HANDLE_VALUE)
 					{
 						UPSUtils::Get().TerminateProcessByHandle(HND_UnrealClient);
@@ -382,8 +396,11 @@ FReply SPSServerSingleton::OnButtonClick()
 		});
 
 		// RUN UNREAL CLIENT
-		const FString ExtraCommands = FSettingsConfig::Get().GetExtraCommands() + " -PixelStreamingIP=" + Config.Config.
-			PublicIp + " -PixelStreamingPort=" + FString::FromInt(Config.Config.StreamerPort);
+		// our client should be on the computer that hosts the server
+		const bool ConnectLocalhost = true;
+		const FString ConnectIP = ConnectLocalhost ? "localhost" : Config.Config.PublicIp;
+		const FString ExtraCommands = FSettingsConfig::Get().GetExtraCommands() + " -PixelStreamingIP=" + ConnectIP +
+			" -PixelStreamingPort=" + FString::FromInt(Config.Config.StreamerPort);
 		UE_LOG(LogPSServer, Display, TEXT("commands: ===%s"), *ExtraCommands);
 
 		AsyncTask(ENamedThreads::AnyThread, [&,ExtraCommands,this]()
@@ -425,6 +442,13 @@ FReply SPSServerSingleton::OnButtonClick()
 	}
 	OnStateChanged.ExecuteIfBound(Config, State);
 	return FReply::Handled();
+}
+
+bool SPSServerSingleton::UpdateConfigBeforeLaunch()
+{
+	Config.Config.PublicIp = FSettingsConfig::Get().GetIsPublic() ? FSettingsConfig::Get().GetPublicIP() : "localhost";
+	Config.Config.UseMatchmaker = FSettingsConfig::Get().GetUseMatchmaker();
+	return FileHelper::Get().UpdateServerConfigIntoJsonFile(Config.ConfigFilePath, Config.Config);
 }
 
 // only support .bat or .ps1 file

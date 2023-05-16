@@ -103,7 +103,7 @@ void FileHelper::AddServerIntoConfig(FBackupServerInfo Config)
 {
 	TArray<FBackupServerInfo> Result;
 	const FString JsonFile = FSettingsConfig::Get().GetLaunchConfig().ServersRoot / "Backup/Servers.json";
-	//@todo: create if not exists
+
 	if (FPaths::FileExists(JsonFile))
 	{
 		FString FileStr;

@@ -94,6 +94,22 @@ void UPSUtils::TerminateProcessByHandle(HANDLE& Handle)
 	}
 }
 
+void UPSUtils::TerminateProcessByName(const FString& ProcessName)
+{
+	FString command = FString::Printf(TEXT("taskkill /IM \"%s\" /T /F"), *ProcessName);
+
+	STARTUPINFO StartupInfo = { sizeof(STARTUPINFO) };
+	PROCESS_INFORMATION ProcessInfo;
+
+	if (CreateProcessW(nullptr, const_cast<LPWSTR>(*command), nullptr, nullptr, false, 0, nullptr, nullptr, &StartupInfo, &ProcessInfo))
+	{
+		WaitForSingleObject(ProcessInfo.hProcess, INFINITE);
+		CloseHandle(ProcessInfo.hProcess);
+		CloseHandle(ProcessInfo.hThread);
+	}
+}
+
+
 bool UPSUtils::IsIPAddress(const FString& IPAddressString)
 {
 	FIPv4Address IPv4Address;

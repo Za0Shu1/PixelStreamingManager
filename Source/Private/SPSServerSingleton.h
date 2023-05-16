@@ -94,6 +94,7 @@ protected:
 	FString GetPreviewURL();
 	void CloseServerHandle();
 	FReply OnButtonClick();
+	bool UpdateConfigBeforeLaunch();
 	void RunServerScript(const FString& ScriptPath, TUniqueFunction<void(int)> Callback);
 	void RunUnrealClient(const FString& ExePath, const FString& ExtraCommands, TUniqueFunction<void(int)> Callback);
 

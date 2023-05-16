@@ -18,6 +18,7 @@ public:
 	bool GetJsonValue(const FString& JsonString, const FString& FieldName, FString& OutValue);
 
 	void TerminateProcessByHandle(HANDLE& Handle);
+	void TerminateProcessByName(const FString& ProcessName);
 	bool IsIPAddress(const FString& IPAddressString);
 
 private:
